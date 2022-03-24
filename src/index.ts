@@ -12,6 +12,7 @@ import getPageUidByPageTitle from "roamjs-components/queries/getPageUidByPageTit
 import getUids from "roamjs-components/dom/getUids";
 import toRoamDate from "roamjs-components/date/toRoamDate";
 import updateBlock from "roamjs-components/writes/updateBlock";
+import { getPageTitleByBlockUid } from "roamjs-components";
 
 const ATTR_REGEX = /^(.*?)::(.*?)$/;
 const getConfigFromPage = (inputPage?: string) => {
@@ -67,7 +68,11 @@ runExtension(ID, () => {
         .replace(new RegExp("\\)", "g"), "\\)")
         .replace(new RegExp("\\|", "g"), "\\|")
         .replace("/Current Time", "[0-2][0-9]:[0-5][0-9]")
-        .replace("/Today", `\\[\\[${DAILY_NOTE_PAGE_REGEX.source}\\]\\]`)}`;
+        .replace("/Today", `\\[\\[${DAILY_NOTE_PAGE_REGEX.source}\\]\\]`)
+        .replace(
+          /{now(?::([^}]+))?}/,
+          `\\[\\[${DAILY_NOTE_PAGE_REGEX.source}\\]\\]`
+        )}`;
       value = value.replace(new RegExp(formattedText), "");
     }
     const replaceTags = config["Replace Tags"];
@@ -97,7 +102,21 @@ runExtension(ID, () => {
       const today = new Date();
       const formattedText = ` ${onTodo
         .replace("/Current Time", format(today, "HH:mm"))
-        .replace("/Today", `[[${toRoamDate(today)}]]`)}`;
+        .replace("/Today", `[[${toRoamDate(today)}]]`)
+        .replace(
+          /{now(?::([^}]+))?}/,
+          (orig: string, _: string, group: string) => {
+            const date = toRoamDate(today);
+            if (
+              /skip dnp/i.test(group) &&
+              date === getPageTitleByBlockUid(blockUid)
+            ) {
+              return orig;
+            } else {
+              return `[[${date}]]`;
+            }
+          }
+        )}`;
       value = value.includes(formattedText)
         ? value
         : `${value}${formattedText}`;
@@ -116,7 +135,21 @@ runExtension(ID, () => {
       const today = new Date();
       const formattedText = ` ${text
         .replace("/Current Time", format(today, "HH:mm"))
-        .replace("/Today", `[[${toRoamDate(today)}]]`)}`;
+        .replace("/Today", `[[${toRoamDate(today)}]]`)
+        .replace(
+          /{now(?::([^}]+))?}/,
+          (orig: string, _: string, group: string) => {
+            const date = toRoamDate(today);
+            if (
+              /skip dnp/i.test(group) &&
+              date === getPageTitleByBlockUid(blockUid)
+            ) {
+              return orig;
+            } else {
+              return `[[${date}]]`;
+            }
+          }
+        )}`;
       value = `${value}${formattedText}`;
     }
     const replaceTags = config["Replace Tags"];
