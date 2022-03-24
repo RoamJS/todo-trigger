@@ -104,20 +104,17 @@ runExtension(ID, () => {
       const formattedText = ` ${onTodo
         .replace("/Current Time", format(today, "HH:mm"))
         .replace("/Today", `[[${toRoamDate(today)}]]`)
-        .replace(
-          /{now(?::([^}]+))?}/,
-          (orig: string, _: string, group: string) => {
-            const date = toRoamDate(today);
-            if (
-              /skip dnp/i.test(group) &&
-              date === getPageTitleByBlockUid(blockUid)
-            ) {
-              return orig;
-            } else {
-              return `[[${date}]]`;
-            }
+        .replace(/{now(?::([^}]+))?}/, (_: string, group: string) => {
+          const date = toRoamDate(today);
+          if (
+            /skip dnp/i.test(group) &&
+            date === getPageTitleByBlockUid(blockUid)
+          ) {
+            return "";
+          } else {
+            return `[[${date}]]`;
           }
-        )}`;
+        })}`;
       value = value.includes(formattedText)
         ? value
         : `${value}${formattedText}`;
@@ -137,20 +134,17 @@ runExtension(ID, () => {
       const formattedText = ` ${text
         .replace("/Current Time", format(today, "HH:mm"))
         .replace("/Today", `[[${toRoamDate(today)}]]`)
-        .replace(
-          /{now(?::([^}]+))?}/,
-          (orig: string, _: string, group: string) => {
-            const date = toRoamDate(today);
-            if (
-              /skip dnp/i.test(group) &&
-              date === getPageTitleByBlockUid(blockUid)
-            ) {
-              return orig;
-            } else {
-              return `[[${date}]]`;
-            }
+        .replace(/{now(?::([^}]+))?}/, (_: string, group: string) => {
+          const date = toRoamDate(today);
+          if (
+            /skip dnp/i.test(group) &&
+            date === getPageTitleByBlockUid(blockUid)
+          ) {
+            return "";
+          } else {
+            return `[[${date}]]`;
           }
-        )}`;
+        })}`;
       value = `${value}${formattedText}`;
     }
     const replaceTags = config["Replace Tags"];
