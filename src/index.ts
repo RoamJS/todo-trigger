@@ -12,7 +12,7 @@ import getPageUidByPageTitle from "roamjs-components/queries/getPageUidByPageTit
 import getUids from "roamjs-components/dom/getUids";
 import toRoamDate from "roamjs-components/date/toRoamDate";
 import updateBlock from "roamjs-components/writes/updateBlock";
-import { getPageTitleByBlockUid } from "roamjs-components";
+import getPageTitleByBlockUid from "roamjs-components/queries/getPageTitleByBlockUid";
 
 const ATTR_REGEX = /^(.*?)::(.*?)$/;
 const getConfigFromPage = (inputPage?: string) => {
