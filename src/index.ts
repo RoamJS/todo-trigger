@@ -13,6 +13,7 @@ import getUids from "roamjs-components/dom/getUids";
 import toRoamDate from "roamjs-components/date/toRoamDate";
 import updateBlock from "roamjs-components/writes/updateBlock";
 import getPageTitleByBlockUid from "roamjs-components/queries/getPageTitleByBlockUid";
+import explode from "./exploder";
 
 const ATTR_REGEX = /^(.*?)::(.*?)$/;
 const getConfigFromPage = (inputPage?: string) => {
@@ -175,6 +176,7 @@ runExtension(ID, () => {
     if (value !== oldValue) {
       updateBlock({ uid: blockUid, text: value });
     }
+    return { explode: !!config["Explode"] };
   };
 
   createHTMLObserver({
@@ -185,12 +187,18 @@ runExtension(ID, () => {
       if (inputTarget.type === "checkbox") {
         const blockUid = getBlockUidFromTarget(inputTarget);
         inputTarget.addEventListener("click", () => {
+          const position = inputTarget.getBoundingClientRect();
           setTimeout(() => {
             const oldValue = getTextByBlockUid(blockUid);
             if (inputTarget.checked) {
               onTodo(blockUid, oldValue);
             } else {
-              onDone(blockUid, oldValue);
+              const config = onDone(blockUid, oldValue);
+              if (config.explode) {
+                setTimeout(() => {
+                  explode(position.x, position.y);
+                }, 50);
+              }
             }
           }, 50);
         });
