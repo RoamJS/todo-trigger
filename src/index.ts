@@ -14,6 +14,7 @@ import updateBlock from "roamjs-components/writes/updateBlock";
 import getPageTitleByBlockUid from "roamjs-components/queries/getPageTitleByBlockUid";
 import explode from "./exploder";
 import type { PullBlock } from "roamjs-components/types/native";
+import addDeferTODOsCommand from "./deferTodos";
 
 const ATTR_REGEX = /^(.*?)::(.*?)$/;
 const legacyGetConfigFromPage = (inputPage?: string) => {
@@ -404,11 +405,14 @@ export default runExtension({
       );
     }
 
+    addDeferTODOsCommand();
+
     return {
       domListeners: [
         { type: "keydown", el: document, listener: keydownEventListener },
       ],
       observers,
+      commands: ["Defer TODO"],
     };
   },
 });
