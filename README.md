@@ -1,4 +1,5 @@
-# todo-trigger
+# TODO Trigger
       
-Description for todo-trigger.
-      
+Tie special actions to converting between TODOs and DONEs!
+
+For full documentation, checkout https://roamjs.com/extensions/todo-trigger!

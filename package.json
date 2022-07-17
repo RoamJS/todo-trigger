@@ -1,7 +1,7 @@
 {
   "name": "todo-trigger",
   "version": "1.0.0",
-  "description": "Description for todo-trigger.",
+  "description": "Tie special actions to converting between TODOs and DONEs!",
   "main": "./build/main.js",
   "scripts": {
     "dev:roam": "roamjs-scripts dev --marketplace",
@@ -15,6 +15,6 @@
   },
   "dependencies": {
     "roamjs-components": "^0.68.2",
-    "roamjs-scripts": "^0.20.0"
+    "roamjs-scripts": "^0.20.1"
   }
 }
