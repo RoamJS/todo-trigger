@@ -15,33 +15,19 @@ import getPageTitleByBlockUid from "roamjs-components/queries/getPageTitleByBloc
 import explode from "./exploder";
 import type { PullBlock } from "roamjs-components/types/native";
 import addDeferTODOsCommand from "./deferTodos";
+import getBasicTreeByParentUid from "roamjs-components/queries/getBasicTreeByParentUid";
+import getShallowTreeByParentUid from "roamjs-components/queries/getShallowTreeByParentUid";
 
-const ATTR_REGEX = /^(.*?)::(.*?)$/;
-const legacyGetConfigFromPage = (inputPage?: string) => {
-  const page =
-    inputPage ||
-    document.getElementsByClassName("rm-title-display")[0]?.textContent;
-  if (!page) {
-    return {};
-  }
+const legacyGetConfigFromPage = (page: string) => {
   const uid = getPageUidByPageTitle(page);
-  const allAttrs = window.roamAlphaAPI
-    .q(
-      `[:find (pull ?c [:block/string]) :where [?b :block/uid "${uid}"] [?c :block/parents ?b] [?c :block/refs]]`
-    )
-    .map((a) => a?.[0]?.string as string)
-    .filter((a) => ATTR_REGEX.test(a))
-    .map((r) =>
-      (ATTR_REGEX.exec(r) || ["", "", ""])
-        .slice(1, 3)
-        .map((s: string) =>
-          (s.trim().startsWith("{{or: ")
-            ? s.substring("{{or: ".length, s.indexOf("|"))
-            : s
-          ).trim()
-        )
-    )
-    .filter(([k]) => !!k);
+  const tree = getBasicTreeByParentUid(uid);
+  const allAttrs = tree.map((c) => {
+    if (/^[\w\s]+::.+$/.test(c.text)) {
+      return c.text.split("::").map((k) => k.trim());
+    } else {
+      return [c.text, c.children[0]?.text];
+    }
+  });
   return Object.fromEntries(allAttrs) as Record<string, string>;
 };
 
@@ -101,14 +87,13 @@ export default runExtension({
     const legacyConfig = legacyGetConfigFromPage(legacyConfigPageName);
     if (Object.keys(legacyConfig).length > 0) {
       const uid = getPageUidByPageTitle(legacyConfigPageName);
-      window.roamAlphaAPI.data.fast
-        .q(
-          `[:find (pull ?c [:block/uid]) :where [?b :block/uid "${uid}"] [?c :block/parents ?b] [?c :block/refs]]`
-        )
-        .forEach((b) => deleteBlock((b[0] as PullBlock)?.[":block/uid"]));
-      Object.entries(legacyConfig)
-        .map(([k, v]) => [k.replace(/ /, "-").toLowerCase(), v])
-        .forEach(([key, value]) => extensionAPI.settings.set(key, value));
+      Promise.all(
+        getShallowTreeByParentUid(uid).map((b) => deleteBlock(b.uid))
+      ).then(() =>
+        Object.entries(legacyConfig)
+          .map(([k, v]) => [k.replace(/ /, "-").toLowerCase(), v])
+          .forEach(([key, value]) => extensionAPI.settings.set(key, value))
+      );
     }
     const CLASSNAMES_TO_CHECK = [
       "rm-block-ref",
