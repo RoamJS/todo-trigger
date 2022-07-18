@@ -1,35 +1,17 @@
-import toConfigPageName from "roamjs-components/util/toConfigPageName";
 import runExtension from "roamjs-components/util/runExtension";
 import format from "date-fns/format";
 import isControl from "roamjs-components/util/isControl";
-import deleteBlock from "roamjs-components/writes/deleteBlock";
 import createHTMLObserver from "roamjs-components/dom/createHTMLObserver";
 import createTagRegex from "roamjs-components/util/createTagRegex";
 import { DAILY_NOTE_PAGE_REGEX } from "roamjs-components/date/constants";
 import getBlockUidFromTarget from "roamjs-components/dom/getBlockUidFromTarget";
 import getTextByBlockUid from "roamjs-components/queries/getTextByBlockUid";
-import getPageUidByPageTitle from "roamjs-components/queries/getPageUidByPageTitle";
 import getUids from "roamjs-components/dom/getUids";
 import updateBlock from "roamjs-components/writes/updateBlock";
 import getPageTitleByBlockUid from "roamjs-components/queries/getPageTitleByBlockUid";
 import explode from "./exploder";
-import type { PullBlock } from "roamjs-components/types/native";
 import addDeferTODOsCommand from "./deferTodos";
-import getBasicTreeByParentUid from "roamjs-components/queries/getBasicTreeByParentUid";
-import getShallowTreeByParentUid from "roamjs-components/queries/getShallowTreeByParentUid";
-
-const legacyGetConfigFromPage = (page: string) => {
-  const uid = getPageUidByPageTitle(page);
-  const tree = getBasicTreeByParentUid(uid);
-  const allAttrs = tree.map((c) => {
-    if (/^[\w\s]+::.+$/.test(c.text)) {
-      return c.text.split("::").map((k) => k.trim());
-    } else {
-      return [c.text, c.children[0]?.text];
-    }
-  });
-  return Object.fromEntries(allAttrs) as Record<string, string>;
-};
+import migrateLegacySettings from "roamjs-components/util/migrateLegacySettings";
 
 const extensionId = "todo-trigger";
 export default runExtension({
@@ -83,18 +65,9 @@ export default runExtension({
         },
       ],
     });
-    const legacyConfigPageName = toConfigPageName(extensionId);
-    const legacyConfig = legacyGetConfigFromPage(legacyConfigPageName);
-    if (Object.keys(legacyConfig).length > 0) {
-      const uid = getPageUidByPageTitle(legacyConfigPageName);
-      Promise.all(
-        getShallowTreeByParentUid(uid).map((b) => deleteBlock(b.uid))
-      ).then(() =>
-        Object.entries(legacyConfig)
-          .map(([k, v]) => [k.replace(/ /, "-").toLowerCase(), v])
-          .forEach(([key, value]) => extensionAPI.settings.set(key, value))
-      );
-    }
+
+    migrateLegacySettings({ extensionAPI, extensionId });
+
     const CLASSNAMES_TO_CHECK = [
       "rm-block-ref",
       "kanban-title",

@@ -13,8 +13,12 @@
   "devDependencies": {
     "typescript": "^4.6.2"
   },
+  "tags": [
+    "automations",
+    "todos"
+  ],
   "dependencies": {
-    "roamjs-components": "^0.68.2",
-    "roamjs-scripts": "^0.20.5"
+    "roamjs-components": "^0.69.0",
+    "roamjs-scripts": "^0.20.6"
   }
 }
