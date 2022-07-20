@@ -15,10 +15,7 @@ type Props = {
   resolve: (value: string) => void;
 };
 
-const Prompt = ({
-  onClose,
-  resolve,
-}: { onClose: () => void } & Props) => {
+const Prompt = ({ onClose, resolve }: { onClose: () => void } & Props) => {
   const [value, setValue] = useState(() => "");
   const [loaded, setLoaded] = useState(false);
   const resolveAndClose = useCallback(
@@ -214,7 +211,7 @@ const addDeferTODOsCommand = () => {
             rmDateFormat +
             " (Deferrals: " +
             btnCounter +
-            ") {{Defer:42SmartBlock:Defer TODOs:varDefDate=" +
+            ") {{Defer:varDefDate=" +
             rmDateFormatStr +
             "}}";
         } else {
@@ -228,14 +225,17 @@ const addDeferTODOsCommand = () => {
             rmDateFormat +
             " (Deferrals: " +
             btnCounter +
-            ") {{Defer:42SmartBlock:Defer TODOs:varDefDate=" +
+            ") {{Defer:varDefDate=" +
             rmDateFormatStr +
             "}}";
         }
 
         updateBlock({
           uid: blockUid,
-          text: blockText.replace(/\[\[[a-zA-Z]+ \d{1\,2}[sthndr]{2}\, \d{4}\]\] \(Deferrals:.*$/, '')
+          text: `${blockText.replace(
+            /\[\[[a-zA-Z]+ \d{1\,2}[sthndr]{2}\, \d{4}\]\] \(Deferrals:.*$/,
+            ""
+          )} ${finalString}`,
         });
       });
     },
