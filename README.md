@@ -4,11 +4,9 @@ Tie special actions to converting between TODOs and DONEs!
 
 ## Usage
 
-This extension uses an older configuration system where it uses Roam attributes. To specify an attribute, create a block with the field name written as `Name::` and the value right next to it.
+This extension supports the following configuration options, to be specified in the `TODO Triggers Home` settings panel within Roam Depot:
 
-This extension supports the following configuration options, to be added in the `[[roam/js/todo-trigger]]` page:
-
-- `Append Text` - (Optional) The text to add to the end of a block, when an item flips from TODO to DONE. It supports the following place holders:
+- `Append Text` - (Optional) The text to add to the end of a block when an item flips from TODO to DONE. It supports the following place holders:
 
     - `/Current Time` - inserts the current time
 
