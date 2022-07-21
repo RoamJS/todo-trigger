@@ -43,4 +43,6 @@ When "Strikethrough" is configured the "Done" action adds a strikethrough to the
 
 When None are configured, nothing happens.
 
-[Demo](https://firebasestorage.googleapis.com/v0/b/firescript-577a2.appspot.com/o/imgs%2Fapp%2Froamjs%2F7LAMTNJU8a.mp4?alt=media&token=e008cb7f-105a-4033-9858-258cc13e283b)
+### Demo
+
+<video src="https://firebasestorage.googleapis.com/v0/b/firescript-577a2.appspot.com/o/imgs%2Fapp%2Froamjs%2F7LAMTNJU8a.mp4?alt=media&token=e008cb7f-105a-4033-9858-258cc13e283b" controls="controls" height="600"></video>
