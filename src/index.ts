@@ -15,8 +15,7 @@ import migrateLegacySettings from "roamjs-components/util/migrateLegacySettings"
 
 const extensionId = "todo-trigger";
 export default runExtension({
-  // uncomment when V1 is live in RoamDepot
-  // migratedTo: "TODO Trigger",
+  migratedTo: "TODO Trigger",
   extensionId,
   run: ({ extensionAPI }) => {
     extensionAPI.settings.panel.create({
