@@ -19,7 +19,7 @@ export default runExtension({
   extensionId,
   run: ({ extensionAPI }) => {
     extensionAPI.settings.panel.create({
-      tabTitle: "TODO Trigger Home",
+      tabTitle: "TODO Trigger",
       settings: [
         {
           id: "append-text",
@@ -303,7 +303,7 @@ export default runExtension({
     document.addEventListener("keydown", keydownEventListener);
 
     const isStrikethrough = !!extensionAPI.settings.get("strikethrough");
-    const isClassname = !!extensionAPI.settings.get("Classname");
+    const isClassname = !!extensionAPI.settings.get("classname");
     const styleBlock = (block: HTMLElement) => {
       if (isStrikethrough) {
         block.style.textDecoration = "line-through";
