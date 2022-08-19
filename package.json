@@ -4,21 +4,19 @@
   "description": "Tie special actions to converting between TODOs and DONEs!",
   "main": "./build/main.js",
   "scripts": {
-    "dev:roam": "roamjs-scripts dev --depot",
     "prebuild:roam": "npm install",
     "build:roam": "roamjs-scripts build --depot",
-    "start": "roamjs-scripts dev"
+    "start": "roamjs-scripts dev --depot"
   },
   "license": "MIT",
   "devDependencies": {
-    "typescript": "^4.6.2"
+    "roamjs-scripts": "^0.21.11"
   },
   "tags": [
     "automations",
     "todos"
   ],
   "dependencies": {
-    "roamjs-components": "^0.70.3",
-    "roamjs-scripts": "^0.21.1"
+    "roamjs-components": "^0.72.8"
   }
 }

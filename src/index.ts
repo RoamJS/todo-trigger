@@ -12,11 +12,13 @@ import getPageTitleByBlockUid from "roamjs-components/queries/getPageTitleByBloc
 import explode from "./exploder";
 import addDeferTODOsCommand from "./deferTodos";
 import migrateLegacySettings from "roamjs-components/util/migrateLegacySettings";
+import getPageUidByPageTitle from "roamjs-components/queries/getPageUidByPageTitle";
+import extractRef from "roamjs-components/util/extractRef";
+import extractTag from "roamjs-components/util/extractTag";
+import getChildrenLengthByParentUid from "roamjs-components/queries/getChildrenLengthByParentUid";
 
-const extensionId = "todo-trigger";
 export default runExtension({
   migratedTo: "TODO Trigger",
-  extensionId,
   run: ({ extensionAPI }) => {
     extensionAPI.settings.panel.create({
       tabTitle: "TODO Trigger",
@@ -62,10 +64,20 @@ export default runExtension({
             "Enable to play a fun animation when the TODO is finished",
           action: { type: "switch" },
         },
+        {
+          id: "send-to-block",
+          name: "Send To Block",
+          description:
+            "Specify a block reference or page name to send completed TODOs",
+          action: {
+            type: "input",
+            placeholder: "Block reference or page name",
+          },
+        },
       ],
     });
 
-    migrateLegacySettings({ extensionAPI, extensionId });
+    migrateLegacySettings({ extensionAPI });
 
     const CLASSNAMES_TO_CHECK = [
       "rm-block-ref",
@@ -198,37 +210,48 @@ export default runExtension({
       if (value !== oldValue) {
         updateBlock({ uid: blockUid, text: value });
       }
+      const sendToBlock = extensionAPI.settings.get("send-to-block") as string;
+      if (sendToBlock) {
+        const uid = extractRef(
+          getPageUidByPageTitle(extractTag(sendToBlock)) || sendToBlock
+        );
+        if (uid) {
+          const bottom = getChildrenLengthByParentUid(uid);
+          window.roamAlphaAPI.moveBlock({
+            location: { "parent-uid": uid, order: bottom },
+            block: { uid: blockUid },
+          });
+        }
+      }
       return { explode: !!extensionAPI.settings.get("explode") };
     };
 
-    const observers = [
-      createHTMLObserver({
-        tag: "LABEL",
-        className: "check-container",
-        callback: (l: HTMLLabelElement) => {
-          const inputTarget = l.querySelector("input");
-          if (inputTarget.type === "checkbox") {
-            const blockUid = getBlockUidFromTarget(inputTarget);
-            inputTarget.addEventListener("click", () => {
-              const position = inputTarget.getBoundingClientRect();
-              setTimeout(() => {
-                const oldValue = getTextByBlockUid(blockUid);
-                if (inputTarget.checked) {
-                  onTodo(blockUid, oldValue);
-                } else {
-                  const config = onDone(blockUid, oldValue);
-                  if (config.explode) {
-                    setTimeout(() => {
-                      explode(position.x, position.y);
-                    }, 50);
-                  }
+    createHTMLObserver({
+      tag: "LABEL",
+      className: "check-container",
+      callback: (l: HTMLLabelElement) => {
+        const inputTarget = l.querySelector("input");
+        if (inputTarget.type === "checkbox") {
+          const blockUid = getBlockUidFromTarget(inputTarget);
+          inputTarget.addEventListener("click", () => {
+            const position = inputTarget.getBoundingClientRect();
+            setTimeout(() => {
+              const oldValue = getTextByBlockUid(blockUid);
+              if (inputTarget.checked) {
+                onTodo(blockUid, oldValue);
+              } else {
+                const config = onDone(blockUid, oldValue);
+                if (config.explode) {
+                  setTimeout(() => {
+                    explode(position.x, position.y);
+                  }, 50);
                 }
-              }, 50);
-            });
-          }
-        },
-      }),
-    ];
+              }
+            }, 50);
+          });
+        }
+      },
+    });
 
     const clickListener = async (e: MouseEvent) => {
       const target = e.target as HTMLElement;
@@ -318,48 +341,42 @@ export default runExtension({
     };
 
     if (isStrikethrough || isClassname) {
-      observers.push(
-        createHTMLObserver({
-          callback: (l: HTMLLabelElement) => {
-            const input = l.getElementsByTagName("input")[0];
-            if (input.checked && !input.disabled) {
-              const zoom = l.closest(
-                ".rm-zoom-item-content"
-              ) as HTMLSpanElement;
-              if (zoom) {
-                styleBlock(
-                  zoom.firstElementChild.firstElementChild as HTMLDivElement
-                );
-                return;
-              }
-              const block = CLASSNAMES_TO_CHECK.map(
-                (c) => l.closest(`.${c}`) as HTMLElement
-              ).find((d) => !!d);
-              if (block) {
-                styleBlock(block);
-              }
-            } else {
-              const zoom = l.closest(
-                ".rm-zoom-item-content"
-              ) as HTMLSpanElement;
-              if (zoom) {
-                unstyleBlock(
-                  zoom.firstElementChild.firstElementChild as HTMLDivElement
-                );
-                return;
-              }
-              const block = CLASSNAMES_TO_CHECK.map(
-                (c) => l.closest(`.${c}`) as HTMLElement
-              ).find((d) => !!d);
-              if (block) {
-                unstyleBlock(block);
-              }
+      createHTMLObserver({
+        callback: (l: HTMLLabelElement) => {
+          const input = l.getElementsByTagName("input")[0];
+          if (input.checked && !input.disabled) {
+            const zoom = l.closest(".rm-zoom-item-content") as HTMLSpanElement;
+            if (zoom) {
+              styleBlock(
+                zoom.firstElementChild.firstElementChild as HTMLDivElement
+              );
+              return;
             }
-          },
-          tag: "LABEL",
-          className: "check-container",
-        })
-      );
+            const block = CLASSNAMES_TO_CHECK.map(
+              (c) => l.closest(`.${c}`) as HTMLElement
+            ).find((d) => !!d);
+            if (block) {
+              styleBlock(block);
+            }
+          } else {
+            const zoom = l.closest(".rm-zoom-item-content") as HTMLSpanElement;
+            if (zoom) {
+              unstyleBlock(
+                zoom.firstElementChild.firstElementChild as HTMLDivElement
+              );
+              return;
+            }
+            const block = CLASSNAMES_TO_CHECK.map(
+              (c) => l.closest(`.${c}`) as HTMLElement
+            ).find((d) => !!d);
+            if (block) {
+              unstyleBlock(block);
+            }
+          }
+        },
+        tag: "LABEL",
+        className: "check-container",
+      });
     }
 
     addDeferTODOsCommand();
@@ -368,7 +385,6 @@ export default runExtension({
       domListeners: [
         { type: "keydown", el: document, listener: keydownEventListener },
       ],
-      observers,
       commands: ["Defer TODO"],
     };
   },

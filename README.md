@@ -32,6 +32,7 @@ This extension supports the following configuration options, to be specified in 
 
 - `Explode` - (Optional) Set to `True` to play a fun animation when the TODO is finished
 
+- `Send To Block` - (Optiona) Set to a page name or a block reference to send the completed TODO to be a child of that node.
 
 Anytime a TODO checkbox becomes DONE, either by user click or keyboard shortbut, the "Done" action fires. Similarly, when a DONE checkbox becomes TODO, the "Todo" action fires. This extension also works on multiple blocks at once.
 
