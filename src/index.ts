@@ -16,10 +16,12 @@ import getPageUidByPageTitle from "roamjs-components/queries/getPageUidByPageTit
 import extractRef from "roamjs-components/util/extractRef";
 import extractTag from "roamjs-components/util/extractTag";
 import getChildrenLengthByParentUid from "roamjs-components/queries/getChildrenLengthByParentUid";
+import initializeTodont, { TODONT_MODES } from "./todont";
 
 export default runExtension({
   migratedTo: "TODO Trigger",
   run: ({ extensionAPI }) => {
+    const toggleTodont = initializeTodont();
     extensionAPI.settings.panel.create({
       tabTitle: "TODO Trigger",
       settings: [
@@ -72,6 +74,18 @@ export default runExtension({
           action: {
             type: "input",
             placeholder: "Block reference or page name",
+          },
+        },
+        {
+          id: "todont-mode",
+          name: "TODONT Mode",
+          description:
+            "Whether to incorporate styling when TODOS turn into ARCHIVED buttons.",
+          action: {
+            type: "select",
+            items: TODONT_MODES.slice(0),
+            onChange: (e) =>
+              toggleTodont(e.target.value as typeof TODONT_MODES[number]),
           },
         },
       ],
@@ -380,6 +394,11 @@ export default runExtension({
     }
 
     addDeferTODOsCommand();
+    toggleTodont(
+      (extensionAPI.settings.get(
+        "todont-mode"
+      ) as typeof TODONT_MODES[number]) || "off"
+    );
 
     return {
       domListeners: [

@@ -44,6 +44,16 @@ When "Strikethrough" is configured the "Done" action adds a strikethrough to the
 
 When None are configured, nothing happens.
 
-### Demo
+## TODONT Mode
+
+TODONT Mode allows users to archive todos, by replacing the `{{[[TODO]]}}` with a `{{[[ARCHIVED]]}}`. To enable, switch on `icon` in the `TODONT MODE` field in your Roam Depot Settings.
+
+To archive a `TODO`, just hit CMD+SHIFT+ENTER (CTRL in windows). In the text area it inserts `{{[[ARCHIVED]]}}` at the beginning of the block. Any TODOs or DONEs will be replaced with an ARCHIVED. If an ARCHIVED exists, it will be cleared. If none of the above exists, an ARCHIVED is inserted in the block.
+
+To change the CSS styling of the archive display, you'll want to change the CSS associated with the `roamjs-todont` class.
+
+If the value is `strikethrough`, the extension will strikethrough the blocks marked with `{{[[ARCHIVED]]}}`.
+
+## Demo
 
 <video src="https://firebasestorage.googleapis.com/v0/b/firescript-577a2.appspot.com/o/imgs%2Fapp%2Froamjs%2F7LAMTNJU8a.mp4?alt=media&token=e008cb7f-105a-4033-9858-258cc13e283b" controls="controls" height="600"></video>
