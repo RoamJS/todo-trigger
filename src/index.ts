@@ -127,14 +127,23 @@ export default runExtension({
           p
             .split(",")
             .map((pp) =>
-              pp.trim().replace("#", "").replace("[[", "").replace("]]", "")
+              pp
+                .trim()
+                .replace(/^#/, "")
+                .replace(/^\[\[/, "")
+                .replace(/\]\]$/, "")
             )
             .reverse()
         );
         if (formattedPairs.filter((p) => p.length === 1).length < 2) {
           formattedPairs.forEach(([before, after]) => {
             if (after) {
-              value = value.replace(before, after);
+              value = value
+                .replace(
+                  `#${before}`,
+                  `#${/\s/.test(after) ? `[[${after}]]` : after}`
+                )
+                .replace(`[[${before}]]`, `[[${after}]]`);
             } else {
               value = `${value}#[[${before}]]`;
             }
@@ -203,7 +212,11 @@ export default runExtension({
           p
             .split(",")
             .map((pp) =>
-              pp.trim().replace("#", "").replace("[[", "").replace("]]", "")
+              pp
+                .trim()
+                .replace(/^#/, "")
+                .replace(/^\[\[/, "")
+                .replace(/\]\]$/, "")
             )
             .map((pp) =>
               pp === "{date}"
@@ -215,7 +228,12 @@ export default runExtension({
         );
         formattedPairs.forEach(([before, after]) => {
           if (after) {
-            value = value.replace(new RegExp(before), after);
+            value = value
+              .replace(
+                `#${before}`,
+                `#${/\s/.test(after) ? `[[${after}]]` : after}`
+              )
+              .replace(`[[${before}]]`, `[[${after}]]`);
           } else {
             value = value.replace(createTagRegex(before), "");
           }
