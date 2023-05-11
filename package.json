@@ -5,18 +5,18 @@
   "main": "./build/main.js",
   "scripts": {
     "prebuild:roam": "npm install",
-    "build:roam": "roamjs-scripts build --depot",
-    "start": "roamjs-scripts dev --depot"
+    "build:roam": "samepage build",
+    "start": "samepage dev"
   },
   "license": "MIT",
-  "devDependencies": {
-    "roamjs-scripts": "^0.21.11"
-  },
   "tags": [
     "automations",
     "todos"
   ],
   "dependencies": {
-    "roamjs-components": "^0.72.8"
+    "roamjs-components": "^0.78.6"
+  },
+  "samepage": {
+    "extends": "node_modules/roamjs-components/package.json"
   }
 }

@@ -11,7 +11,6 @@ import updateBlock from "roamjs-components/writes/updateBlock";
 import getPageTitleByBlockUid from "roamjs-components/queries/getPageTitleByBlockUid";
 import explode from "./utils/exploder";
 import addDeferTODOsCommand from "./utils/deferTodos";
-import migrateLegacySettings from "roamjs-components/util/migrateLegacySettings";
 import getPageUidByPageTitle from "roamjs-components/queries/getPageUidByPageTitle";
 import extractRef from "roamjs-components/util/extractRef";
 import extractTag from "roamjs-components/util/extractTag";
@@ -19,7 +18,6 @@ import getChildrenLengthByParentUid from "roamjs-components/queries/getChildrenL
 import initializeTodont, { TODONT_MODES } from "./utils/todont";
 
 export default runExtension({
-  migratedTo: "TODO Trigger",
   run: ({ extensionAPI }) => {
     const toggleTodont = initializeTodont();
     extensionAPI.settings.panel.create({
@@ -91,8 +89,6 @@ export default runExtension({
       ],
     });
 
-    migrateLegacySettings({ extensionAPI });
-
     const CLASSNAMES_TO_CHECK = [
       "rm-block-ref",
       "kanban-title",
@@ -143,7 +139,7 @@ export default runExtension({
                   `#${before}`,
                   `#${/\s/.test(after) ? `[[${after}]]` : after}`
                 )
-                .replace(`[[${before}]]`, `[[${after}]]`);
+                .replace(new RegExp(`\\[\\[${before}\\]\\]`), `[[${after}]]`);
             } else {
               value = `${value}#[[${before}]]`;
             }
@@ -233,7 +229,7 @@ export default runExtension({
                 `#${before}`,
                 `#${/\s/.test(after) ? `[[${after}]]` : after}`
               )
-              .replace(`[[${before}]]`, `[[${after}]]`);
+              .replace(new RegExp(`\\[\\[${before}\\]\\]`), `[[${after}]]`);
           } else {
             value = value.replace(createTagRegex(before), "");
           }
@@ -261,9 +257,10 @@ export default runExtension({
     createHTMLObserver({
       tag: "LABEL",
       className: "check-container",
-      callback: (l: HTMLLabelElement) => {
+      callback: (_l) => {
+        const l = _l as HTMLLabelElement;
         const inputTarget = l.querySelector("input");
-        if (inputTarget.type === "checkbox") {
+        if (inputTarget?.type === "checkbox") {
           const blockUid = getBlockUidFromTarget(inputTarget);
           inputTarget.addEventListener("click", () => {
             const position = inputTarget.getBoundingClientRect();
@@ -288,7 +285,7 @@ export default runExtension({
     const clickListener = async (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       if (
-        target.parentElement.getElementsByClassName(
+        target.parentElement?.getElementsByClassName(
           "bp3-text-overflow-ellipsis"
         )[0]?.innerHTML === "TODO"
       ) {
@@ -303,7 +300,8 @@ export default runExtension({
     };
     document.addEventListener("click", clickListener);
 
-    const keydownEventListener = async (e: KeyboardEvent) => {
+    const keydownEventListener = async (_e: Event) => {
+      const e  = _e as KeyboardEvent;
       if (e.key === "Enter") {
         if (isControl(e)) {
           const target = e.target as HTMLElement;
@@ -337,12 +335,13 @@ export default runExtension({
           const target = e.target as HTMLElement;
           if (target.tagName === "TEXTAREA") {
             const todoItem = Array.from(
-              target.parentElement.querySelectorAll<HTMLDivElement>(
+              target.parentElement?.querySelectorAll<HTMLDivElement>(
                 ".bp3-text-overflow-ellipsis"
-              )
+              ) || []
             ).find((t) => t.innerText === "TODO");
             if (
               todoItem &&
+              todoItem.parentElement &&
               getComputedStyle(todoItem.parentElement).backgroundColor ===
                 "rgb(213, 218, 223)"
             ) {
@@ -374,13 +373,13 @@ export default runExtension({
 
     if (isStrikethrough || isClassname) {
       createHTMLObserver({
-        callback: (l: HTMLLabelElement) => {
+        callback: (l) => {
           const input = l.getElementsByTagName("input")[0];
           if (input.checked && !input.disabled) {
             const zoom = l.closest(".rm-zoom-item-content") as HTMLSpanElement;
             if (zoom) {
               styleBlock(
-                zoom.firstElementChild.firstElementChild as HTMLDivElement
+                zoom.firstElementChild?.firstElementChild as HTMLDivElement
               );
               return;
             }
@@ -394,7 +393,7 @@ export default runExtension({
             const zoom = l.closest(".rm-zoom-item-content") as HTMLSpanElement;
             if (zoom) {
               unstyleBlock(
-                zoom.firstElementChild.firstElementChild as HTMLDivElement
+                zoom.firstElementChild?.firstElementChild as HTMLDivElement
               );
               return;
             }
