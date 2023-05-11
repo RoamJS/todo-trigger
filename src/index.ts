@@ -9,14 +9,14 @@ import getTextByBlockUid from "roamjs-components/queries/getTextByBlockUid";
 import getUids from "roamjs-components/dom/getUids";
 import updateBlock from "roamjs-components/writes/updateBlock";
 import getPageTitleByBlockUid from "roamjs-components/queries/getPageTitleByBlockUid";
-import explode from "./exploder";
-import addDeferTODOsCommand from "./deferTodos";
+import explode from "./utils/exploder";
+import addDeferTODOsCommand from "./utils/deferTodos";
 import migrateLegacySettings from "roamjs-components/util/migrateLegacySettings";
 import getPageUidByPageTitle from "roamjs-components/queries/getPageUidByPageTitle";
 import extractRef from "roamjs-components/util/extractRef";
 import extractTag from "roamjs-components/util/extractTag";
 import getChildrenLengthByParentUid from "roamjs-components/queries/getChildrenLengthByParentUid";
-import initializeTodont, { TODONT_MODES } from "./todont";
+import initializeTodont, { TODONT_MODES } from "./utils/todont";
 
 export default runExtension({
   migratedTo: "TODO Trigger",
