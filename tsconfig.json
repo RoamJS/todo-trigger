@@ -1,9 +1,5 @@
 {
   "extends": "./node_modules/@samepage/scripts/tsconfig",
-  "include": [
-    "src"
-  ],
-  "exclude": [
-    "node_modules"
-  ]
+  "include": ["src"],
+  "exclude": ["node_modules"]
 }
