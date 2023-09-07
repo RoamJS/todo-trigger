@@ -57,6 +57,13 @@ export default runExtension(async ({ extensionAPI }) => {
         action: { type: "switch" },
       },
       {
+        id: "trim",
+        name: "Trim Whitespace",
+        description:
+          "Trim the whitespace at the front and end when blocks become TODO or DONE",
+        action: { type: "switch" },
+      },
+      {
         id: "explode",
         name: "Explode",
         description: "Enable to play a fun animation when the TODO is finished",
@@ -169,6 +176,12 @@ export default runExtension(async ({ extensionAPI }) => {
         ? value
         : `${value}${formattedText}`;
     }
+    const trim = extensionAPI.settings.get("trim") as boolean;
+    if (trim) {
+      // replace whitespace after {{[[TODO]]}}
+      value = value.replace(/(\{\{\[\[TODO\]\]\}})\s+/g, "$1");
+      value = value.trim();
+    }
 
     if (value !== oldValue) {
       updateBlock({ uid: blockUid, text: value });
@@ -232,6 +245,12 @@ export default runExtension(async ({ extensionAPI }) => {
           value = value.replace(createTagRegex(before), "");
         }
       });
+    }
+    const trim = extensionAPI.settings.get("trim") as boolean;
+    if (trim) {
+      // replace whitespace after {{[[DONE]]}}
+      value = value.replace(/(\{\{\[\[DONE\]\]\}})\s+/g, "$1");
+      value = value.trim();
     }
     if (value !== oldValue) {
       updateBlock({ uid: blockUid, text: value });
