@@ -6,7 +6,6 @@ import getBasicTreeByParentUid from "roamjs-components/queries/getBasicTreeByPar
 import createHTMLObserver from "roamjs-components/dom/createHTMLObserver";
 import createObserver from "roamjs-components/dom/createObserver";
 import toFlexRegex from "roamjs-components/util/toFlexRegex";
-import isControl from "roamjs-components/util/isControl";
 import getUids from "roamjs-components/dom/getUids";
 import { OnloadArgs } from "roamjs-components/types";
 
@@ -82,7 +81,9 @@ export const replaceText = ({
 
 export const TODONT_MODES = ["off", "icon", "strikethrough"] as const;
 
-const initializeTodont = () => {
+const ARCHIVE_COMMAND_LABEL = "Archive TODO";
+
+const initializeTodont = (extensionAPI: OnloadArgs["extensionAPI"]) => {
   const unloads = new Set<() => void>();
   return async (todontMode: typeof TODONT_MODES[number]) => {
     if (todontMode !== "off") {
@@ -197,15 +198,16 @@ const initializeTodont = () => {
         }
       };
 
-      const keydownEventListener = async (e: KeyboardEvent) => {
-        if (e.key === "Enter" && e.shiftKey && isControl(e)) {
-          todontCallback();
-        }
-      };
-
-      document.addEventListener("keydown", keydownEventListener);
+      extensionAPI.ui.commandPalette.addCommand({
+        label: ARCHIVE_COMMAND_LABEL,
+        callback: todontCallback,
+        "default-hotkey": "ctrl-shift-enter",
+        "disable-hotkey": false,
+      });
       unloads.add(() => {
-        document.removeEventListener("keydown", keydownEventListener);
+        extensionAPI.ui.commandPalette.removeCommand({
+          label: ARCHIVE_COMMAND_LABEL,
+        });
       });
 
       if (todontMode === "strikethrough") {

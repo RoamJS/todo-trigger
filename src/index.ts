@@ -18,7 +18,7 @@ import getChildrenLengthByParentUid from "roamjs-components/queries/getChildrenL
 import initializeTodont, { TODONT_MODES } from "./utils/todont";
 
 export default runExtension(async ({ extensionAPI }) => {
-  const toggleTodont = initializeTodont();
+  const toggleTodont = initializeTodont(extensionAPI);
   extensionAPI.settings.panel.create({
     tabTitle: "TODO Trigger",
     settings: [
