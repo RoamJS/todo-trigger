@@ -86,6 +86,10 @@ const ARCHIVE_COMMAND_LABEL = "Archive TODO";
 const initializeTodont = (extensionAPI: OnloadArgs["extensionAPI"]) => {
   const unloads = new Set<() => void>();
   return async (todontMode: typeof TODONT_MODES[number]) => {
+    // Clean up previous mode before setting up new one
+    unloads.forEach((u) => u());
+    unloads.clear();
+
     if (todontMode !== "off") {
       const TODONT_CLASSNAME = "roamjs-todont";
       const css = document.createElement("style");
@@ -237,9 +241,6 @@ const initializeTodont = (extensionAPI: OnloadArgs["extensionAPI"]) => {
         });
         unloads.add(() => strikethroughObserver.disconnect());
       }
-    } else {
-      unloads.forEach((u) => u());
-      unloads.clear();
     }
   };
 };
