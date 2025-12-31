@@ -83,7 +83,7 @@ export default runExtension(async ({ extensionAPI }) => {
         id: "todont-mode",
         name: "TODONT Mode",
         description:
-          "Whether to incorporate styling when TODOS turn into ARCHIVED buttons.",
+          "Whether to incorporate styling when TODOS turn into ARCHIVED buttons. When enabled, adds 'Archive TODO' command to the command palette (customizable hotkey in Settings → Hotkeys).",
         action: {
           type: "select",
           items: TODONT_MODES.slice(0),
