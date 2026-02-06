@@ -1,6 +1,12 @@
+<a href="https://roamjs.com/">
+    <img src="https://avatars.githubusercontent.com/u/138642184" alt="RoamJS Logo" title="RoamJS" align="right" height="60" />
+</a>
+
 # TODO Trigger
-      
-Tie special actions to converting between TODOs and DONEs!
+
+**Automate what happens when tasks move from TODO → DONE (and back). Append timestamps, replace tags, strike through or style completed items, play a fun "explode" animation, or auto-file finished tasks to a chosen page/block.**
+
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/RoamJS/todo-trigger)
 
 ## Usage
 
