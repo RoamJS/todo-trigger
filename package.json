@@ -5,7 +5,7 @@
   "main": "./build/main.js",
   "scripts": {
     "prebuild:roam": "npm install",
-    "build:roam": "samepage build",
+    "build:roam": "samepage build --dry",
     "start": "samepage dev"
   },
   "license": "MIT",
