@@ -13,24 +13,23 @@
 This extension supports the following configuration options, to be specified in the `TODO Triggers Home` settings panel within Roam Depot:
 
 - `Append Text` - (Optional) The text to add to the end of a block when an item flips from TODO to DONE. It supports the following place holders:
+  - `/Current Time` - inserts the current time
 
-    - `/Current Time` - inserts the current time
+  - `/Today` **(deprecated)** - inserts the the current day
 
-    - `/Today` **(deprecated)** - inserts the the current day
-
-    - `{now}`- inserts the current day. Use `{now:skip dnp}` to skip adding the current day when the TODO is on a daily note page.
+  - `{now}`- inserts the current day. Use `{now:skip dnp}` to skip adding the current day when the TODO is on a daily note page.
 
 - `On Todo` - (Optional) The text to add to the end of a block, when a block first becomes a TODO. It supports the following place holders:
+  - `/Current Time` - inserts the current time
 
-    - `/Current Time` - inserts the current time
+  - `/Today` **(deprecated)** - inserts the the current day
 
-    - `/Today` **(deprecated)** - inserts the the current day
-
-    - `{now}`- inserts the current day. Use `{now:skip dnp}` to skip adding the current day when the TODO is on a daily note page.
+  - `{now}`- inserts the current day. Use `{now:skip dnp}` to skip adding the current day when the TODO is on a daily note page.
 
 - `Replace Tags` - (Optional) The set of pairs that you would want to be replaced upon switching between todo and done. Multiple pairs are deliminited by `|` and each pair is delimited by `,`. For example, `Replace Tags:: #toRead, #Read | #toWrite, #Written`
+  - There are a couple of placeholders this option supports. `{date}` maps to any date tag and `{today}` maps to today. So you could configure `Replace Tags:: {date}, {today}` to replace a date tag with today's date.
 
-    - There are a couple of placeholders this option supports. `{date}` maps to any date tag and `{today}` maps to today. So you could configure `Replace Tags:: {date}, {today}` to replace a date tag with today's date.
+- `Ignore Tags` - (Optional) Comma- or pipe-separated list of tags that should skip TODO/DONE triggers for the block (for example, `#no-trigger, #skip`).
 
 - `Strikethrough` - (Optional) Set to `True` to strikethrough blocks with `{{[[DONE]]}}`.
 
