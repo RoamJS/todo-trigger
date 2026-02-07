@@ -422,9 +422,14 @@ export default runExtension(async ({ extensionAPI }) => {
         if (input.checked && !input.disabled) {
           const zoom = l.closest(".rm-zoom-item-content") as HTMLSpanElement;
           if (zoom) {
-            styleBlock(
-              zoom.firstElementChild?.firstElementChild as HTMLDivElement,
-            );
+            const blockUid = getBlockUidFromTarget(input);
+            const zoomElement = zoom.firstElementChild
+              ?.firstElementChild as HTMLDivElement;
+            if (blockUid && shouldIgnoreBlock(getTextByBlockUid(blockUid))) {
+              unstyleBlock(zoomElement);
+            } else {
+              styleBlock(zoomElement);
+            }
             return;
           }
           const block = CLASSNAMES_TO_CHECK.map(
