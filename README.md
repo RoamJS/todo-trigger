@@ -15,14 +15,14 @@ This extension supports the following configuration options, to be specified in 
 - `Append Text` - (Optional) The text to add to the end of a block when an item flips from TODO to DONE. It supports the following place holders:
   - `/Current Time` - inserts the current time
 
-  - `/Today` **(deprecated)** - inserts the the current day
+  - `/Today` **(deprecated)** - inserts the current day
 
   - `{now}`- inserts the current day. Use `{now:skip dnp}` to skip adding the current day when the TODO is on a daily note page.
 
 - `On Todo` - (Optional) The text to add to the end of a block, when a block first becomes a TODO. It supports the following place holders:
   - `/Current Time` - inserts the current time
 
-  - `/Today` **(deprecated)** - inserts the the current day
+  - `/Today` **(deprecated)** - inserts the current day
 
   - `{now}`- inserts the current day. Use `{now:skip dnp}` to skip adding the current day when the TODO is on a daily note page.
 
