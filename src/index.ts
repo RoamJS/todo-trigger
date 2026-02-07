@@ -44,6 +44,13 @@ export default runExtension(async ({ extensionAPI }) => {
         action: { type: "input", placeholder: "#toRead, #Read" },
       },
       {
+        id: "ignore-tags",
+        name: "Ignore Tags",
+        description:
+          "Comma- or pipe-separated list of tags that should skip TODO/DONE triggers",
+        action: { type: "input", placeholder: "#no-trigger, #skip" },
+      },
+      {
         id: "strikethrough",
         name: "Strikethrough",
         description: "Enable to strikethrough blocks with `{{[[DONE]]}}`",
@@ -101,7 +108,24 @@ export default runExtension(async ({ extensionAPI }) => {
     "roam-block",
   ];
 
+  const shouldIgnoreBlock = (value: string) => {
+    const ignoreTags = extensionAPI.settings.get("ignore-tags") as string;
+    if (!ignoreTags) {
+      return false;
+    }
+    return ignoreTags
+      .split(/[,|]/)
+      .map((tag) =>
+        tag.trim().replace(/^#/, "").replace(/^\[\[/, "").replace(/\]\]$/, ""),
+      )
+      .filter((tag) => !!tag)
+      .some((tag) => createTagRegex(tag).test(value));
+  };
+
   const onTodo = (blockUid: string, oldValue: string) => {
+    if (shouldIgnoreBlock(oldValue)) {
+      return;
+    }
     const text = extensionAPI.settings.get("append-text") as string;
     let value = oldValue;
     if (text) {
@@ -117,7 +141,7 @@ export default runExtension(async ({ extensionAPI }) => {
         .replace("/Today", `\\[\\[${DAILY_NOTE_PAGE_REGEX.source}\\]\\]`)
         .replace(
           /{now(?::([^}]+))?}/,
-          `\\[\\[${DAILY_NOTE_PAGE_REGEX.source}\\]\\]`
+          `\\[\\[${DAILY_NOTE_PAGE_REGEX.source}\\]\\]`,
         )}`;
       value = value.replace(new RegExp(formattedText), "");
     }
@@ -132,9 +156,9 @@ export default runExtension(async ({ extensionAPI }) => {
               .trim()
               .replace(/^#/, "")
               .replace(/^\[\[/, "")
-              .replace(/\]\]$/, "")
+              .replace(/\]\]$/, ""),
           )
-          .reverse()
+          .reverse(),
       );
       if (formattedPairs.filter((p) => p.length === 1).length < 2) {
         formattedPairs.forEach(([before, after]) => {
@@ -142,7 +166,7 @@ export default runExtension(async ({ extensionAPI }) => {
             value = value
               .replace(
                 `#${before}`,
-                `#${/\s/.test(after) ? `[[${after}]]` : after}`
+                `#${/\s/.test(after) ? `[[${after}]]` : after}`,
               )
               .replace(new RegExp(`\\[\\[${before}\\]\\]`), `[[${after}]]`);
           } else {
@@ -159,7 +183,7 @@ export default runExtension(async ({ extensionAPI }) => {
         .replace("/Current Time", format(today, "HH:mm"))
         .replace(
           "/Today",
-          `[[${window.roamAlphaAPI.util.dateToPageTitle(today)}]]`
+          `[[${window.roamAlphaAPI.util.dateToPageTitle(today)}]]`,
         )
         .replace(/{now(?::([^}]+))?}/, (_: string, group: string) => {
           const date = window.roamAlphaAPI.util.dateToPageTitle(today);
@@ -189,6 +213,9 @@ export default runExtension(async ({ extensionAPI }) => {
   };
 
   const onDone = (blockUid: string, oldValue: string) => {
+    if (shouldIgnoreBlock(oldValue)) {
+      return { explode: false };
+    }
     const text = extensionAPI.settings.get("append-text") as string;
     let value = oldValue;
     if (text) {
@@ -197,7 +224,7 @@ export default runExtension(async ({ extensionAPI }) => {
         .replace("/Current Time", format(today, "HH:mm"))
         .replace(
           "/Today",
-          `[[${window.roamAlphaAPI.util.dateToPageTitle(today)}]]`
+          `[[${window.roamAlphaAPI.util.dateToPageTitle(today)}]]`,
         )
         .replace(/{now(?::([^}]+))?}/, (_: string, group: string) => {
           const date = window.roamAlphaAPI.util.dateToPageTitle(today);
@@ -223,22 +250,22 @@ export default runExtension(async ({ extensionAPI }) => {
               .trim()
               .replace(/^#/, "")
               .replace(/^\[\[/, "")
-              .replace(/\]\]$/, "")
+              .replace(/\]\]$/, ""),
           )
           .map((pp) =>
             pp === "{date}"
               ? DAILY_NOTE_PAGE_REGEX.source
               : pp === "{today}"
-              ? window.roamAlphaAPI.util.dateToPageTitle(new Date())
-              : pp
-          )
+                ? window.roamAlphaAPI.util.dateToPageTitle(new Date())
+                : pp,
+          ),
       );
       formattedPairs.forEach(([before, after]) => {
         if (after) {
           value = value
             .replace(
               `#${before}`,
-              `#${/\s/.test(after) ? `[[${after}]]` : after}`
+              `#${/\s/.test(after) ? `[[${after}]]` : after}`,
             )
             .replace(new RegExp(`\\[\\[${before}\\]\\]`), `[[${after}]]`);
         } else {
@@ -258,7 +285,7 @@ export default runExtension(async ({ extensionAPI }) => {
     const sendToBlock = extensionAPI.settings.get("send-to-block") as string;
     if (sendToBlock) {
       const uid = extractRef(
-        getPageUidByPageTitle(extractTag(sendToBlock)) || sendToBlock
+        getPageUidByPageTitle(extractTag(sendToBlock)) || sendToBlock,
       );
       if (uid) {
         const bottom = getChildrenLengthByParentUid(uid);
@@ -303,7 +330,7 @@ export default runExtension(async ({ extensionAPI }) => {
     const target = e.target as HTMLElement;
     if (
       target.parentElement?.getElementsByClassName(
-        "bp3-text-overflow-ellipsis"
+        "bp3-text-overflow-ellipsis",
       )[0]?.innerHTML === "TODO"
     ) {
       const textarea = target
@@ -334,7 +361,7 @@ export default runExtension(async ({ extensionAPI }) => {
         }
         Array.from(document.getElementsByClassName("block-highlight-blue"))
           .map(
-            (d) => d.getElementsByClassName("roam-block")[0] as HTMLDivElement
+            (d) => d.getElementsByClassName("roam-block")[0] as HTMLDivElement,
           )
           .map((d) => getUids(d).blockUid)
           .map((blockUid) => ({
@@ -353,8 +380,8 @@ export default runExtension(async ({ extensionAPI }) => {
         if (target.tagName === "TEXTAREA") {
           const todoItem = Array.from(
             target.parentElement?.querySelectorAll<HTMLDivElement>(
-              ".bp3-text-overflow-ellipsis"
-            ) || []
+              ".bp3-text-overflow-ellipsis",
+            ) || [],
           ).find((t) => t.innerText === "TODO");
           if (
             todoItem &&
@@ -395,14 +422,26 @@ export default runExtension(async ({ extensionAPI }) => {
         if (input.checked && !input.disabled) {
           const zoom = l.closest(".rm-zoom-item-content") as HTMLSpanElement;
           if (zoom) {
-            styleBlock(
-              zoom.firstElementChild?.firstElementChild as HTMLDivElement
-            );
+            const blockUid = getBlockUidFromTarget(input);
+            const zoomElement = zoom.firstElementChild
+              ?.firstElementChild as HTMLDivElement;
+            if (blockUid && shouldIgnoreBlock(getTextByBlockUid(blockUid))) {
+              unstyleBlock(zoomElement);
+            } else {
+              styleBlock(zoomElement);
+            }
             return;
           }
           const block = CLASSNAMES_TO_CHECK.map(
-            (c) => l.closest(`.${c}`) as HTMLElement
+            (c) => l.closest(`.${c}`) as HTMLElement,
           ).find((d) => !!d);
+          if (block) {
+            const blockUid = getBlockUidFromTarget(input);
+            if (blockUid && shouldIgnoreBlock(getTextByBlockUid(blockUid))) {
+              unstyleBlock(block);
+              return;
+            }
+          }
           if (block) {
             styleBlock(block);
           }
@@ -410,13 +449,20 @@ export default runExtension(async ({ extensionAPI }) => {
           const zoom = l.closest(".rm-zoom-item-content") as HTMLSpanElement;
           if (zoom) {
             unstyleBlock(
-              zoom.firstElementChild?.firstElementChild as HTMLDivElement
+              zoom.firstElementChild?.firstElementChild as HTMLDivElement,
             );
             return;
           }
           const block = CLASSNAMES_TO_CHECK.map(
-            (c) => l.closest(`.${c}`) as HTMLElement
+            (c) => l.closest(`.${c}`) as HTMLElement,
           ).find((d) => !!d);
+          if (block) {
+            const blockUid = getBlockUidFromTarget(input);
+            if (blockUid && shouldIgnoreBlock(getTextByBlockUid(blockUid))) {
+              unstyleBlock(block);
+              return;
+            }
+          }
           if (block) {
             unstyleBlock(block);
           }
@@ -430,8 +476,8 @@ export default runExtension(async ({ extensionAPI }) => {
   addDeferTODOsCommand();
   toggleTodont(
     (extensionAPI.settings.get(
-      "todont-mode"
-    ) as (typeof TODONT_MODES)[number]) || "off"
+      "todont-mode",
+    ) as (typeof TODONT_MODES)[number]) || "off",
   );
 
   return {
