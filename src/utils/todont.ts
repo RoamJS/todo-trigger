@@ -1,13 +1,8 @@
-import { createConfigObserver } from "roamjs-components/components/ConfigPage";
-import getSubTree from "roamjs-components/util/getSubTree";
-import runExtension from "roamjs-components/util/runExtension";
-import FlagPanel from "roamjs-components/components/ConfigPanels/FlagPanel";
-import getBasicTreeByParentUid from "roamjs-components/queries/getBasicTreeByParentUid";
 import createHTMLObserver from "roamjs-components/dom/createHTMLObserver";
 import createObserver from "roamjs-components/dom/createObserver";
-import toFlexRegex from "roamjs-components/util/toFlexRegex";
-import isControl from "roamjs-components/util/isControl";
 import getUids from "roamjs-components/dom/getUids";
+import getTextByBlockUid from "roamjs-components/queries/getTextByBlockUid";
+import updateBlock from "roamjs-components/writes/updateBlock";
 import { OnloadArgs } from "roamjs-components/types";
 
 const CLASSNAMES_TO_CHECK = [
@@ -55,6 +50,7 @@ export const replaceText = ({
       : `${oldValue}${after}`
     : oldValue.replace(`${before}${!after && prepend ? " " : ""}`, after);
   const location = window.roamAlphaAPI.ui.getFocusedBlock();
+  if (!location) return;
   const blockUid = location["block-uid"];
   window.roamAlphaAPI.updateBlock({ block: { string: text, uid: blockUid } });
   const diff = text.length - oldValue.length;
@@ -62,7 +58,7 @@ export const replaceText = ({
     let index = 0;
     const maxIndex = Math.min(
       Math.max(oldValue.length, text.length),
-      Math.max(start, end) + 1
+      Math.max(start, end) + 1,
     );
     for (index = 0; index < maxIndex; index++) {
       if (oldValue.charAt(index) !== text.charAt(index)) {
@@ -82,13 +78,103 @@ export const replaceText = ({
 
 export const TODONT_MODES = ["off", "icon", "strikethrough"] as const;
 
-const initializeTodont = () => {
+const ARCHIVE_COMMAND_LABEL = "TODONT Hotkey";
+
+const initializeTodont = (extensionAPI: OnloadArgs["extensionAPI"]) => {
   const unloads = new Set<() => void>();
-  return async (todontMode: typeof TODONT_MODES[number]) => {
-    if (todontMode !== "off") {
-      const TODONT_CLASSNAME = "roamjs-todont";
-      const css = document.createElement("style");
-      css.textContent = `.bp3-button.bp3-small.${TODONT_CLASSNAME} {
+  const cleanup = () => {
+    unloads.forEach((u) => u());
+    unloads.clear();
+  };
+
+  const archiveBlock = (blockUid: string, value: string) => {
+    const firstButtonTag = /{{\[\[([A-Z]{4,8})\]\]}}/.exec(value)?.[1];
+    let newText: string;
+    if (firstButtonTag === "TODO") {
+      newText = value.replace("{{[[TODO]]}}", "{{[[ARCHIVED]]}}");
+    } else if (firstButtonTag === "DONE") {
+      newText = value.replace("{{[[DONE]]}}", "{{[[ARCHIVED]]}}");
+    } else if (firstButtonTag === "ARCHIVED") {
+      newText = value.replace(/^\{\{\[\[ARCHIVED\]\]\}}\s*/, "");
+    } else {
+      newText = `{{[[ARCHIVED]]}} ${value}`;
+    }
+    if (newText !== value) {
+      updateBlock({ uid: blockUid, text: newText });
+    }
+  };
+
+  const todontCallback = () => {
+    const selectedBlocks = Array.from(
+      document.getElementsByClassName("block-highlight-blue"),
+    );
+    if (selectedBlocks.length > 0) {
+      selectedBlocks
+        .map(
+          (d) => d.getElementsByClassName("roam-block")[0] as HTMLDivElement,
+        )
+        .filter((d) => !!d)
+        .forEach((d) => {
+          const { blockUid } = getUids(d);
+          const value = getTextByBlockUid(blockUid);
+          if (value) {
+            archiveBlock(blockUid, value);
+          }
+        });
+      return;
+    }
+    if (document.activeElement?.tagName === "TEXTAREA") {
+      const textArea = document.activeElement as HTMLTextAreaElement;
+      const firstButtonTag = /{{\[\[([A-Z]{4,8})\]\]}}/.exec(
+        textArea.value,
+      )?.[1];
+      if (firstButtonTag === "TODO") {
+        replaceText({ before: "{{[[TODO]]}}", after: "{{[[ARCHIVED]]}}" });
+      } else if (firstButtonTag === "DONE") {
+        replaceText({ before: "{{[[DONE]]}}", after: "{{[[ARCHIVED]]}}" });
+      } else if (firstButtonTag === "ARCHIVED") {
+        replaceText({
+          before: "{{[[ARCHIVED]]}}",
+          after: "",
+          prepend: true,
+        });
+      } else {
+        replaceText({
+          before: "",
+          prepend: true,
+          after: "{{[[ARCHIVED]]}}",
+        });
+      }
+    }
+  };
+
+  const toggle = (todontMode: typeof TODONT_MODES[number]) => {
+    cleanup();
+
+    const defaultArchiveHotkey = /Mac|iPhone|iPad|iPod/i.test(
+      navigator.platform,
+    )
+      ? "cmd+shift+enter"
+      : "ctrl+shift+enter";
+    extensionAPI.ui.commandPalette.addCommand({
+      label: ARCHIVE_COMMAND_LABEL,
+      callback: todontCallback,
+      defaultHotkey: defaultArchiveHotkey,
+      disableHotkey: false,
+    });
+    unloads.add(() => {
+      extensionAPI.ui.commandPalette.removeCommand({
+        label: ARCHIVE_COMMAND_LABEL,
+      });
+    });
+
+    if (todontMode === "off") {
+      return;
+    }
+
+    const TODONT_CLASSNAME = "roamjs-todont";
+    const css = document.createElement("style");
+    css.textContent = `.bp3-button.bp3-small.${TODONT_CLASSNAME} {
     padding: 0;
     min-height: 0;
     min-width: 0;
@@ -97,148 +183,135 @@ const initializeTodont = () => {
     height: 14px;
     border-radius: 4px;
     width: 14px;
-    color: #2E2E2E;
+    color: transparent;
     background-color: #EF5151;
     border: #EA666656;
     border-width: 0 2px 2px 0;
+    font-size: 0;
+    line-height: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.bp3-button.bp3-small.${TODONT_CLASSNAME}::before {
+    content: "x";
+    color: #2E2E2E;
+    font-size: 12px;
+    line-height: 14px;
+    font-weight: 700;
 }`;
-      document.getElementsByTagName("head")[0].appendChild(css);
-      unloads.add(() => {
-        css.remove();
-      });
+    document.getElementsByTagName("head")[0].appendChild(css);
+    unloads.add(() => {
+      css.remove();
+    });
 
-      const styleArchivedButtons = (node: HTMLElement) => {
-        const buttons = node.getElementsByTagName("button");
-        Array.from(buttons).forEach((button) => {
-          if (
-            button.innerText === "ARCHIVED" &&
-            button.className.indexOf(TODONT_CLASSNAME) < 0
-          ) {
-            button.innerText = "x";
-            button.className = `${button.className} ${TODONT_CLASSNAME}`;
-          }
-        });
-      };
-      styleArchivedButtons(document.body);
-      unloads.add(() => {
-        document
-          .querySelectorAll<HTMLButtonElement>(`.${TODONT_CLASSNAME}`)
-          .forEach((b) => {
-            if (b.innerText === "x") {
-              b.innerText = "ARCHIVED";
-            }
-            b.classList.remove(TODONT_CLASSNAME);
-          });
-      });
-
-      let previousActiveElement: HTMLElement;
-      const todontIconButton = createMobileIcon(
-        "mobile-todont-icon-button",
-        "minus-square"
-      );
-      todontIconButton.onclick = () => {
-        if (previousActiveElement.tagName === "TEXTAREA") {
-          previousActiveElement.focus();
-          todontCallback();
-        }
-      };
-
-      todontIconButton.onmousedown = () => {
-        previousActiveElement = document.activeElement as HTMLElement;
-      };
-      unloads.add(() => {
-        todontIconButton.remove();
-      });
-
-      const iconObserver = createObserver((mutationList: MutationRecord[]) => {
-        mutationList.forEach((record) => {
-          styleArchivedButtons(record.target as HTMLElement);
-        });
-        const mobileBackButton = document.getElementById(
-          "mobile-back-icon-button"
-        );
-        if (
-          !!mobileBackButton &&
-          !document.getElementById("mobile-todont-icon-button")
-        ) {
-          const mobileBar = document.getElementById("rm-mobile-bar");
-          if (mobileBar) {
-            mobileBar.insertBefore(todontIconButton, mobileBackButton);
-          }
-        }
-      });
-      unloads.add(() => {
-        iconObserver.disconnect();
-      });
-
-      const todontCallback = () => {
-        if (document.activeElement.tagName === "TEXTAREA") {
-          const textArea = document.activeElement as HTMLTextAreaElement;
-          const firstButtonTag = /{{\[\[([A-Z]{4,8})\]\]}}/.exec(
-            textArea.value
-          )?.[1];
-          if (firstButtonTag === "TODO") {
-            replaceText({ before: "{{[[TODO]]}}", after: "{{[[ARCHIVED]]}}" });
-          } else if (firstButtonTag === "DONE") {
-            replaceText({ before: "{{[[DONE]]}}", after: "{{[[ARCHIVED]]}}" });
-          } else if (firstButtonTag === "ARCHIVED") {
-            replaceText({
-              before: "{{[[ARCHIVED]]}}",
-              after: "",
-              prepend: true,
-            });
-          } else {
-            replaceText({
-              before: "",
-              prepend: true,
-              after: "{{[[ARCHIVED]]}}",
-            });
-          }
-        }
-      };
-
-      const keydownEventListener = async (e: KeyboardEvent) => {
-        if (e.key === "Enter" && e.shiftKey && isControl(e)) {
-          todontCallback();
-        }
-      };
-
-      document.addEventListener("keydown", keydownEventListener);
-      unloads.add(() => {
-        document.removeEventListener("keydown", keydownEventListener);
-      });
-
-      if (todontMode === "strikethrough") {
-        const styleBlock = (block?: HTMLElement) => {
-          if (block) {
-            block.style.textDecoration = "line-through";
-          }
-        };
-        const strikethroughObserver = createHTMLObserver({
-          callback: (b: HTMLButtonElement) => {
-            const zoom = b.closest(".rm-zoom-item-content") as HTMLSpanElement;
-            if (zoom) {
-              styleBlock(
-                zoom.firstElementChild.firstElementChild as HTMLDivElement
-              );
-              return;
-            }
-            const block = CLASSNAMES_TO_CHECK.map(
-              (c) => b.closest(`.${c}`) as HTMLElement
-            ).find((d) => !!d);
-            if (block) {
-              styleBlock(block);
-            }
-          },
-          tag: "BUTTON",
-          className: TODONT_CLASSNAME,
-        });
-        unloads.add(() => strikethroughObserver.disconnect());
+    const isArchivedButton = (button: HTMLButtonElement): boolean =>
+      /\bARCHIVED\b/i.test(button.textContent || "");
+    const syncArchivedButton = (button: HTMLButtonElement) => {
+      if (isArchivedButton(button)) {
+        button.classList.add(TODONT_CLASSNAME);
+      } else {
+        button.classList.remove(TODONT_CLASSNAME);
       }
-    } else {
-      unloads.forEach((u) => u());
-      unloads.clear();
+    };
+    const syncArchivedButtons = (node?: HTMLElement | null) => {
+      if (!node) {
+        return;
+      }
+      if (node instanceof HTMLButtonElement) {
+        syncArchivedButton(node);
+        return;
+      }
+      node.querySelectorAll<HTMLButtonElement>("button").forEach(syncArchivedButton);
+    };
+    syncArchivedButtons(document.body);
+    unloads.add(() => {
+      document.querySelectorAll<HTMLButtonElement>(`.${TODONT_CLASSNAME}`).forEach((b) => {
+        b.classList.remove(TODONT_CLASSNAME);
+      });
+    });
+
+    let previousActiveElement: HTMLElement | null = null;
+    const todontIconButton = createMobileIcon(
+      "mobile-todont-icon-button",
+      "minus-square",
+    );
+    todontIconButton.onclick = () => {
+      if (previousActiveElement?.tagName === "TEXTAREA") {
+        previousActiveElement.focus();
+        todontCallback();
+      }
+    };
+
+    todontIconButton.onmousedown = () => {
+      previousActiveElement = document.activeElement as HTMLElement;
+    };
+    unloads.add(() => {
+      todontIconButton.remove();
+    });
+
+    const iconObserver = createObserver((mutationList: MutationRecord[]) => {
+      mutationList.forEach((record) => {
+        if (record.target instanceof HTMLElement) {
+          syncArchivedButtons(record.target);
+        }
+        record.addedNodes.forEach((node) => {
+          if (node instanceof HTMLElement) {
+            syncArchivedButtons(node);
+          } else if (node instanceof Text) {
+            syncArchivedButtons(node.parentElement);
+          }
+        });
+      });
+      const mobileBackButton = document.getElementById(
+        "mobile-back-icon-button",
+      );
+      if (
+        !!mobileBackButton &&
+        !document.getElementById("mobile-todont-icon-button")
+      ) {
+        const mobileBar = document.getElementById("rm-mobile-bar");
+        if (mobileBar) {
+          mobileBar.insertBefore(todontIconButton, mobileBackButton);
+        }
+      }
+    });
+    unloads.add(() => {
+      iconObserver.disconnect();
+    });
+
+    if (todontMode === "strikethrough") {
+      const styleBlock = (block?: HTMLElement) => {
+        if (block) {
+          block.style.textDecoration = "line-through";
+        }
+      };
+      const strikethroughObserver = createHTMLObserver({
+        callback: (b: HTMLButtonElement) => {
+          const zoom = b.closest(".rm-zoom-item-content") as HTMLSpanElement;
+          if (zoom) {
+            styleBlock(
+              zoom.firstElementChild?.firstElementChild as HTMLDivElement,
+            );
+            return;
+          }
+          const block = CLASSNAMES_TO_CHECK.map(
+            (c) => b.closest(`.${c}`) as HTMLElement,
+          ).find((d) => !!d);
+          if (block) {
+            styleBlock(block);
+          }
+        },
+        tag: "BUTTON",
+        className: TODONT_CLASSNAME,
+      });
+      unloads.add(() => strikethroughObserver.disconnect());
     }
+  };
+
+  return {
+    toggle,
+    cleanup,
   };
 };
 
