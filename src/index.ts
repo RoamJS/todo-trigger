@@ -16,9 +16,19 @@ import extractRef from "roamjs-components/util/extractRef";
 import extractTag from "roamjs-components/util/extractTag";
 import getChildrenLengthByParentUid from "roamjs-components/queries/getChildrenLengthByParentUid";
 import initializeTodont, { TODONT_MODES } from "./utils/todont";
+import normalizeTodoArchivedPrefix from "./utils/normalizeTodoArchivedPrefix";
 
 export default runExtension(async ({ extensionAPI }) => {
-  const toggleTodont = initializeTodont();
+  const { toggle: toggleTodont, cleanup: cleanupTodont } =
+    initializeTodont(extensionAPI);
+  const getTodontMode = (): (typeof TODONT_MODES)[number] => {
+    const configuredMode = extensionAPI.settings.get("todont-mode");
+    return TODONT_MODES.includes(
+      configuredMode as (typeof TODONT_MODES)[number],
+    )
+      ? (configuredMode as (typeof TODONT_MODES)[number])
+      : "icon";
+  };
   extensionAPI.settings.panel.create({
     tabTitle: "TODO Trigger",
     settings: [
@@ -42,6 +52,18 @@ export default runExtension(async ({ extensionAPI }) => {
         description:
           "The set of pairs that you would want to be replaced upon switching between todo and done",
         action: { type: "input", placeholder: "#toRead, #Read" },
+      },
+      {
+        id: "todont-mode",
+        name: "TODONT Mode",
+        description:
+          "Whether to incorporate styling when TODOS turn into ARCHIVED buttons.",
+        action: {
+          type: "select",
+          items: TODONT_MODES.slice(0),
+          onChange: (e) =>
+            toggleTodont(e.target.value as (typeof TODONT_MODES)[number]),
+        },
       },
       {
         id: "ignore-tags",
@@ -86,20 +108,23 @@ export default runExtension(async ({ extensionAPI }) => {
           placeholder: "Block reference or page name",
         },
       },
-      {
-        id: "todont-mode",
-        name: "TODONT Mode",
-        description:
-          "Whether to incorporate styling when TODOS turn into ARCHIVED buttons.",
-        action: {
-          type: "select",
-          items: TODONT_MODES.slice(0),
-          onChange: (e) =>
-            toggleTodont(e.target.value as (typeof TODONT_MODES)[number]),
-        },
-      },
     ],
   });
+  const settingsCaretStyle = document.createElement("style");
+  settingsCaretStyle.textContent = `
+.rm-settings .bp3-button .bp3-icon-caret-up {
+  transform: rotate(180deg);
+}
+`;
+  document.head.appendChild(settingsCaretStyle);
+
+  if (
+    !TODONT_MODES.includes(
+      extensionAPI.settings.get("todont-mode") as (typeof TODONT_MODES)[number],
+    )
+  ) {
+    await extensionAPI.settings.set("todont-mode", "icon");
+  }
 
   const CLASSNAMES_TO_CHECK = [
     "rm-block-ref",
@@ -128,6 +153,9 @@ export default runExtension(async ({ extensionAPI }) => {
     }
     const text = extensionAPI.settings.get("append-text") as string;
     let value = oldValue;
+    // Roam's Cmd/Ctrl+Enter prepends TODO for non-checkbox blocks.
+    // If the block starts with ARCHIVED, collapse TODO+ARCHIVED into TODO.
+    value = normalizeTodoArchivedPrefix(value);
     if (text) {
       const formattedText = ` ${text
         .replace(new RegExp("\\^", "g"), "\\^")
@@ -298,6 +326,42 @@ export default runExtension(async ({ extensionAPI }) => {
     return { explode: !!extensionAPI.settings.get("explode") };
   };
 
+  type TodoState = "todo" | "done" | "other";
+  const getTodoState = (value: string): TodoState => {
+    if (value.startsWith("{{[[DONE]]}}")) {
+      return "done";
+    }
+    if (value.startsWith("{{[[TODO]]}}")) {
+      return "todo";
+    }
+    return "other";
+  };
+  const initialEditStateByBlock = new Map<string, TodoState>();
+  const focusinListener = (e: FocusEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.tagName !== "TEXTAREA") {
+      return;
+    }
+    const textArea = target as HTMLTextAreaElement;
+    const { blockUid } = getUids(textArea);
+    const value = getTextByBlockUid(blockUid) || textArea.value;
+    initialEditStateByBlock.set(blockUid, getTodoState(value));
+  };
+  const focusoutListener = (e: FocusEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.tagName !== "TEXTAREA") {
+      return;
+    }
+    const textArea = target as HTMLTextAreaElement;
+    const { blockUid } = getUids(textArea);
+    const initialState = initialEditStateByBlock.get(blockUid) || "other";
+    initialEditStateByBlock.delete(blockUid);
+    const value = getTextByBlockUid(blockUid) || textArea.value || "";
+    if (initialState === "other" && getTodoState(value) === "done") {
+      onDone(blockUid, value);
+    }
+  };
+
   createHTMLObserver({
     tag: "LABEL",
     className: "check-container",
@@ -326,55 +390,88 @@ export default runExtension(async ({ extensionAPI }) => {
     },
   });
 
-  const clickListener = async (e: MouseEvent) => {
+  const clickListener = (e: MouseEvent) => {
     const target = e.target as HTMLElement;
-    if (
-      target.parentElement?.getElementsByClassName(
-        "bp3-text-overflow-ellipsis",
-      )[0]?.innerHTML === "TODO"
-    ) {
-      const textarea = target
-        .closest(".roam-block-container")
-        ?.getElementsByTagName?.("textarea")?.[0];
-      if (textarea) {
-        const { blockUid } = getUids(textarea);
-        onTodo(blockUid, textarea.value);
-      }
+    const menuItem = target.closest(".bp3-menu-item");
+    if (!menuItem) {
+      return;
+    }
+    const menuLabel = menuItem
+      .querySelector(".bp3-text-overflow-ellipsis")
+      ?.textContent?.trim();
+    if (menuLabel !== "TODO") {
+      return;
+    }
+    const textarea = target
+      .closest(".roam-block-container")
+      ?.getElementsByTagName?.("textarea")?.[0];
+    if (textarea) {
+      const { blockUid } = getUids(textarea);
+      onTodo(blockUid, textarea.value);
     }
   };
   document.addEventListener("click", clickListener);
 
   const keydownEventListener = async (_e: Event) => {
     const e = _e as KeyboardEvent;
+    const ROAM_STATE_SETTLE_MS = 50;
     if (e.key === "Enter") {
       if (isControl(e)) {
+        // Cmd/Ctrl+Shift+Enter is reserved for the Archive TODO command.
+        if (e.shiftKey) {
+          return;
+        }
         const target = e.target as HTMLElement;
         if (target.tagName === "TEXTAREA") {
           const textArea = target as HTMLTextAreaElement;
           const { blockUid } = getUids(textArea);
-          if (textArea.value.startsWith("{{[[DONE]]}}")) {
-            onDone(blockUid, textArea.value);
-          } else if (textArea.value.startsWith("{{[[TODO]]}}")) {
-            onTodo(blockUid, textArea.value);
+          // Read from Roam's data layer — the textarea DOM value may lag
+          // behind after a recent API update (e.g. toggling to ARCHIVED).
+          const blockText =
+            getTextByBlockUid(blockUid) || textArea.value;
+          if (blockText.startsWith("{{[[ARCHIVED]]}}")) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            const withoutArchived = blockText.replace(
+              /^\{\{\[\[ARCHIVED\]\]\}}\s*/,
+              "",
+            );
+            const normalized = withoutArchived
+              ? `{{[[TODO]]}} ${withoutArchived}`
+              : "{{[[TODO]]}}";
+            if (normalized !== blockText) {
+              updateBlock({ uid: blockUid, text: normalized });
+            }
+          } else {
+            setTimeout(() => {
+              const value = getTextByBlockUid(blockUid);
+              if (value.startsWith("{{[[DONE]]}}")) {
+                onDone(blockUid, value);
+              } else if (value.startsWith("{{[[TODO]]}}")) {
+                onTodo(blockUid, value);
+              }
+            }, ROAM_STATE_SETTLE_MS);
           }
           return;
         }
-        Array.from(document.getElementsByClassName("block-highlight-blue"))
+        const blockUids = Array.from(
+          document.getElementsByClassName("block-highlight-blue"),
+        )
           .map(
             (d) => d.getElementsByClassName("roam-block")[0] as HTMLDivElement,
           )
-          .map((d) => getUids(d).blockUid)
-          .map((blockUid) => ({
-            blockUid,
-            text: getTextByBlockUid(blockUid),
-          }))
-          .forEach(({ blockUid, text }) => {
-            if (text.startsWith("{{[[DONE]]}}")) {
-              onTodo(blockUid, text);
-            } else if (text.startsWith("{{[[TODO]]}}")) {
-              onDone(blockUid, text);
+          .map((d) => getUids(d).blockUid);
+        setTimeout(() => {
+          blockUids.forEach((blockUid) => {
+            const value = getTextByBlockUid(blockUid);
+            if (value.startsWith("{{[[DONE]]}}")) {
+              onDone(blockUid, value);
+            } else if (value.startsWith("{{[[TODO]]}}")) {
+              onTodo(blockUid, value);
             }
           });
+        }, ROAM_STATE_SETTLE_MS);
       } else {
         const target = e.target as HTMLElement;
         if (target.tagName === "TEXTAREA") {
@@ -399,6 +496,8 @@ export default runExtension(async ({ extensionAPI }) => {
   };
 
   document.addEventListener("keydown", keydownEventListener);
+  document.addEventListener("focusin", focusinListener, true);
+  document.addEventListener("focusout", focusoutListener, true);
 
   const isStrikethrough = !!extensionAPI.settings.get("strikethrough");
   const isClassname = !!extensionAPI.settings.get("classname");
@@ -474,16 +573,20 @@ export default runExtension(async ({ extensionAPI }) => {
   }
 
   addDeferTODOsCommand();
-  toggleTodont(
-    (extensionAPI.settings.get(
-      "todont-mode",
-    ) as (typeof TODONT_MODES)[number]) || "off",
-  );
+  toggleTodont(getTodontMode());
 
   return {
     domListeners: [
       { type: "keydown", el: document, listener: keydownEventListener },
+      { type: "click", el: document, listener: clickListener },
     ],
     commands: ["Defer TODO"],
+    unload: () => {
+      cleanupTodont();
+      settingsCaretStyle.remove();
+      document.removeEventListener("focusin", focusinListener, true);
+      document.removeEventListener("focusout", focusoutListener, true);
+      initialEditStateByBlock.clear();
+    },
   };
 });
