@@ -83,7 +83,9 @@ const ARCHIVE_COMMAND_LABEL = "TODONT Hotkey";
 const initializeTodont = (extensionAPI: OnloadArgs["extensionAPI"]) => {
   const unloads = new Set<() => void>();
   const cleanup = () => {
-    unloads.forEach((u) => u());
+    unloads.forEach((u) => {
+      void u();
+    });
     unloads.clear();
   };
 
@@ -151,9 +153,15 @@ const initializeTodont = (extensionAPI: OnloadArgs["extensionAPI"]) => {
   const toggle = (todontMode: typeof TODONT_MODES[number]) => {
     cleanup();
 
-    const defaultArchiveHotkey = /Mac|iPhone|iPad|iPod/i.test(
-      navigator.platform,
-    )
+    const platform =
+      (
+        navigator as Navigator & {
+          userAgentData?: { platform?: string };
+        }
+      ).userAgentData?.platform ||
+      navigator.platform ||
+      "";
+    const defaultArchiveHotkey = /Mac|iPhone|iPad|iPod/i.test(platform)
       ? "cmd+shift+enter"
       : "ctrl+shift+enter";
     extensionAPI.ui.commandPalette.addCommand({
