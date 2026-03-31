@@ -16,6 +16,13 @@ import extractRef from "roamjs-components/util/extractRef";
 import extractTag from "roamjs-components/util/extractTag";
 import getChildrenLengthByParentUid from "roamjs-components/queries/getChildrenLengthByParentUid";
 import initializeTodont, { TODONT_MODES } from "./utils/todont";
+import normalizeTodoArchivedPrefix from "./utils/normalizeTodoArchivedPrefix";
+import {
+  captureInitialTodoState,
+  markHandledTodoState,
+  shouldHandleManualDoneOnFocusout,
+} from "./utils/todoStateTracking";
+import type { TodoState } from "./utils/todoStateTracking";
 
 export default runExtension(async ({ extensionAPI }) => {
   const toggleTodont = initializeTodont();
@@ -128,6 +135,9 @@ export default runExtension(async ({ extensionAPI }) => {
     }
     const text = extensionAPI.settings.get("append-text") as string;
     let value = oldValue;
+    // Roam's Cmd/Ctrl+Enter prepends TODO for non-checkbox blocks.
+    // If the block starts with ARCHIVED, collapse TODO+ARCHIVED into TODO.
+    value = normalizeTodoArchivedPrefix(value);
     if (text) {
       const formattedText = ` ${text
         .replace(new RegExp("\\^", "g"), "\\^")
@@ -298,6 +308,32 @@ export default runExtension(async ({ extensionAPI }) => {
     return { explode: !!extensionAPI.settings.get("explode") };
   };
 
+  const initialEditStateByBlock = new Map<string, TodoState>();
+  const focusinListener = (e: FocusEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.tagName !== "TEXTAREA") {
+      return;
+    }
+    const textArea = target as HTMLTextAreaElement;
+    const { blockUid } = getUids(textArea);
+    const value = getTextByBlockUid(blockUid) || textArea.value;
+    captureInitialTodoState(initialEditStateByBlock, blockUid, value);
+  };
+  const focusoutListener = (e: FocusEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.tagName !== "TEXTAREA") {
+      return;
+    }
+    const textArea = target as HTMLTextAreaElement;
+    const { blockUid } = getUids(textArea);
+    const initialState = initialEditStateByBlock.get(blockUid);
+    initialEditStateByBlock.delete(blockUid);
+    const value = getTextByBlockUid(blockUid) || textArea.value || "";
+    if (shouldHandleManualDoneOnFocusout(initialState, value)) {
+      onDone(blockUid, value);
+    }
+  };
+
   createHTMLObserver({
     tag: "LABEL",
     className: "check-container",
@@ -326,20 +362,24 @@ export default runExtension(async ({ extensionAPI }) => {
     },
   });
 
-  const clickListener = async (e: MouseEvent) => {
-    const target = e.target as HTMLElement;
-    if (
-      target.parentElement?.getElementsByClassName(
-        "bp3-text-overflow-ellipsis",
-      )[0]?.innerHTML === "TODO"
-    ) {
-      const textarea = target
-        .closest(".roam-block-container")
-        ?.getElementsByTagName?.("textarea")?.[0];
-      if (textarea) {
-        const { blockUid } = getUids(textarea);
-        onTodo(blockUid, textarea.value);
-      }
+  const clickListener = (_e: Event) => {
+    const target = (_e as MouseEvent).target as HTMLElement;
+    const menuItem = target.closest(".bp3-menu-item");
+    if (!menuItem) {
+      return;
+    }
+    const menuLabel = menuItem
+      .querySelector(".bp3-text-overflow-ellipsis")
+      ?.textContent?.trim();
+    if (menuLabel !== "TODO") {
+      return;
+    }
+    const textarea = target
+      .closest(".roam-block-container")
+      ?.getElementsByTagName?.("textarea")?.[0];
+    if (textarea) {
+      const { blockUid } = getUids(textarea);
+      onTodo(blockUid, getTextByBlockUid(blockUid) || textarea.value);
     }
   };
   document.addEventListener("click", clickListener);
@@ -352,8 +392,27 @@ export default runExtension(async ({ extensionAPI }) => {
         if (target.tagName === "TEXTAREA") {
           const textArea = target as HTMLTextAreaElement;
           const { blockUid } = getUids(textArea);
-          if (textArea.value.startsWith("{{[[DONE]]}}")) {
+          // Check data layer for ARCHIVED state — the textarea DOM value
+          // may lag behind after a recent API update.
+          const blockText =
+            getTextByBlockUid(blockUid) || textArea.value;
+          if (blockText.startsWith("{{[[ARCHIVED]]}}")) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            const withoutArchived = blockText.replace(
+              /^\{\{\[\[ARCHIVED\]\]\}}\s*/,
+              "",
+            );
+            const normalized = withoutArchived
+              ? `{{[[TODO]]}} ${withoutArchived}`
+              : "{{[[TODO]]}}";
+            if (normalized !== blockText) {
+              updateBlock({ uid: blockUid, text: normalized });
+            }
+          } else if (textArea.value.startsWith("{{[[DONE]]}}")) {
             onDone(blockUid, textArea.value);
+            markHandledTodoState(initialEditStateByBlock, blockUid, textArea.value);
           } else if (textArea.value.startsWith("{{[[TODO]]}}")) {
             onTodo(blockUid, textArea.value);
           }
@@ -399,6 +458,8 @@ export default runExtension(async ({ extensionAPI }) => {
   };
 
   document.addEventListener("keydown", keydownEventListener);
+  document.addEventListener("focusin", focusinListener, true);
+  document.addEventListener("focusout", focusoutListener, true);
 
   const isStrikethrough = !!extensionAPI.settings.get("strikethrough");
   const isClassname = !!extensionAPI.settings.get("classname");
@@ -483,7 +544,13 @@ export default runExtension(async ({ extensionAPI }) => {
   return {
     domListeners: [
       { type: "keydown", el: document, listener: keydownEventListener },
+      { type: "click", el: document, listener: clickListener },
     ],
     commands: ["Defer TODO"],
+    unload: () => {
+      document.removeEventListener("focusin", focusinListener, true);
+      document.removeEventListener("focusout", focusoutListener, true);
+      initialEditStateByBlock.clear();
+    },
   };
 });
