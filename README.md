@@ -6,7 +6,7 @@
 
 **Automate what happens when tasks move from TODO → DONE (and back). Append timestamps, replace tags, strike through or style completed items, play a fun "explode" animation, or auto-file finished tasks to a chosen page/block.**
 
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/RoamJS/todo-trigger)
+[![RoamJS](https://roamjs.com/badges/website.svg)](https://roamjs.com/) [![DeepWiki](https://roamjs.com/badges/deepwiki.svg)](https://deepwiki.com/RoamJS/todo-trigger) [![Slack](https://roamjs.com/badges/slack.svg)](https://roamresearch.slack.com/archives/C016N2B66JU)
 
 ## Usage
 
