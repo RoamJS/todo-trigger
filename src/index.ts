@@ -16,6 +16,7 @@ import extractRef from "roamjs-components/util/extractRef";
 import extractTag from "roamjs-components/util/extractTag";
 import getChildrenLengthByParentUid from "roamjs-components/queries/getChildrenLengthByParentUid";
 import initializeTodont, { TODONT_MODES } from "./utils/todont";
+import normalizeTodoArchivedPrefix from "./utils/normalizeTodoArchivedPrefix";
 
 export default runExtension(async ({ extensionAPI }) => {
   const toggleTodont = initializeTodont();
@@ -128,6 +129,9 @@ export default runExtension(async ({ extensionAPI }) => {
     }
     const text = extensionAPI.settings.get("append-text") as string;
     let value = oldValue;
+    // Roam's Cmd/Ctrl+Enter prepends TODO for non-checkbox blocks.
+    // If the block starts with ARCHIVED, collapse TODO+ARCHIVED into TODO.
+    value = normalizeTodoArchivedPrefix(value);
     if (text) {
       const formattedText = ` ${text
         .replace(new RegExp("\\^", "g"), "\\^")
@@ -352,7 +356,25 @@ export default runExtension(async ({ extensionAPI }) => {
         if (target.tagName === "TEXTAREA") {
           const textArea = target as HTMLTextAreaElement;
           const { blockUid } = getUids(textArea);
-          if (textArea.value.startsWith("{{[[DONE]]}}")) {
+          // Check data layer for ARCHIVED state — the textarea DOM value
+          // may lag behind after a recent API update.
+          const blockText =
+            getTextByBlockUid(blockUid) || textArea.value;
+          if (blockText.startsWith("{{[[ARCHIVED]]}}")) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            const withoutArchived = blockText.replace(
+              /^\{\{\[\[ARCHIVED\]\]\}}\s*/,
+              "",
+            );
+            const normalized = withoutArchived
+              ? `{{[[TODO]]}} ${withoutArchived}`
+              : "{{[[TODO]]}}";
+            if (normalized !== blockText) {
+              updateBlock({ uid: blockUid, text: normalized });
+            }
+          } else if (textArea.value.startsWith("{{[[DONE]]}}")) {
             onDone(blockUid, textArea.value);
           } else if (textArea.value.startsWith("{{[[TODO]]}}")) {
             onTodo(blockUid, textArea.value);
