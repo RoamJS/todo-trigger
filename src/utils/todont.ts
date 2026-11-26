@@ -4,7 +4,7 @@ import getUids from "roamjs-components/dom/getUids";
 import getTextByBlockUid from "roamjs-components/queries/getTextByBlockUid";
 import updateBlock from "roamjs-components/writes/updateBlock";
 import { OnloadArgs } from "roamjs-components/types";
-import { applyArchiveEdit, pickArchiveEdit } from "./archiveText";
+import { applyArchiveEdit, isArchivedText, pickArchiveEdit } from "./archiveText";
 
 const CLASSNAMES_TO_CHECK = [
   "rm-block-ref",
@@ -98,16 +98,19 @@ const initializeTodont = (extensionAPI: OnloadArgs["extensionAPI"]) => {
       document.getElementsByClassName("block-highlight-blue"),
     );
     if (selectedBlocks.length > 0) {
-      selectedBlocks
+      const blocks = selectedBlocks
         .map(
           (d) => d.getElementsByClassName("roam-block")[0] as HTMLDivElement,
         )
         .filter((d) => !!d)
-        .forEach((d) => {
+        .map((d) => {
           const { blockUid } = getUids(d);
-          const value = getTextByBlockUid(blockUid);
-          archiveBlock(blockUid, value);
+          return { blockUid, value: getTextByBlockUid(blockUid) };
         });
+      const allArchived = blocks.every(({ value }) => isArchivedText(value));
+      blocks.forEach(({ blockUid, value }) => {
+        if (allArchived || !isArchivedText(value)) archiveBlock(blockUid, value);
+      });
       return;
     }
     if (document.activeElement?.tagName === "TEXTAREA") {

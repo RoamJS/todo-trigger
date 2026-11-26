@@ -4,13 +4,16 @@ export type ArchiveEdit = {
   prepend?: boolean;
 };
 
+export const isArchivedText = (value: string): boolean =>
+  value.includes("{{[[ARCHIVED]]}}");
+
 export const pickArchiveEdit = (value: string): ArchiveEdit => {
+  if (isArchivedText(value)) {
+    return { before: "{{[[ARCHIVED]]}}", after: "", prepend: true };
+  }
   const firstButtonTag = /{{\[\[([A-Z]{4,8})\]\]}}/.exec(value)?.[1];
   if (firstButtonTag === "TODO" || firstButtonTag === "DONE") {
     return { before: `{{[[${firstButtonTag}]]}}`, after: "{{[[ARCHIVED]]}}" };
-  }
-  if (firstButtonTag === "ARCHIVED") {
-    return { before: "{{[[ARCHIVED]]}}", after: "", prepend: true };
   }
   return { before: "", after: "{{[[ARCHIVED]]}}", prepend: true };
 };

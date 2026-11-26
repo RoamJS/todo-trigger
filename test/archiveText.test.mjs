@@ -7,6 +7,7 @@ test("archive edits toggle the first button tag consistently", () => {
     ["{{[[TODO]]}} task", "{{[[ARCHIVED]]}} task"],
     ["{{[[DONE]]}} task", "{{[[ARCHIVED]]}} task"],
     ["{{[[ARCHIVED]]}} task", "task"],
+    ["{{[[TODO]]}} {{[[ARCHIVED]]}} x", "{{[[TODO]]}} x"],
     ["{{[[ARCHIVED]]}}", ""],
     ["task {{[[ARCHIVED]]}}", "task "],
     ["before {{[[ARCHIVED]]}} task", "before task"],
