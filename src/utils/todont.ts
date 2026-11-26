@@ -4,6 +4,7 @@ import getUids from "roamjs-components/dom/getUids";
 import getTextByBlockUid from "roamjs-components/queries/getTextByBlockUid";
 import updateBlock from "roamjs-components/writes/updateBlock";
 import { OnloadArgs } from "roamjs-components/types";
+import { applyArchiveEdit, pickArchiveEdit } from "./archiveText";
 
 const CLASSNAMES_TO_CHECK = [
   "rm-block-ref",
@@ -44,11 +45,7 @@ export const replaceText = ({
   const oldValue = textArea.value;
   const start = textArea.selectionStart;
   const end = textArea.selectionEnd;
-  const text = !before
-    ? prepend
-      ? `${after} ${oldValue}`
-      : `${oldValue}${after}`
-    : oldValue.replace(`${before}${!after && prepend ? " " : ""}`, after);
+  const text = applyArchiveEdit(oldValue, { before, after, prepend });
   const location = window.roamAlphaAPI.ui.getFocusedBlock();
   if (!location) return;
   const blockUid = location["block-uid"];
@@ -90,17 +87,7 @@ const initializeTodont = (extensionAPI: OnloadArgs["extensionAPI"]) => {
   };
 
   const archiveBlock = (blockUid: string, value: string) => {
-    const firstButtonTag = /{{\[\[([A-Z]{4,8})\]\]}}/.exec(value)?.[1];
-    let newText: string;
-    if (firstButtonTag === "TODO") {
-      newText = value.replace("{{[[TODO]]}}", "{{[[ARCHIVED]]}}");
-    } else if (firstButtonTag === "DONE") {
-      newText = value.replace("{{[[DONE]]}}", "{{[[ARCHIVED]]}}");
-    } else if (firstButtonTag === "ARCHIVED") {
-      newText = value.replace(/^\{\{\[\[ARCHIVED\]\]\}}\s*/, "");
-    } else {
-      newText = `{{[[ARCHIVED]]}} ${value}`;
-    }
+    const newText = applyArchiveEdit(value, pickArchiveEdit(value));
     if (newText !== value) {
       updateBlock({ uid: blockUid, text: newText });
     }
@@ -119,7 +106,7 @@ const initializeTodont = (extensionAPI: OnloadArgs["extensionAPI"]) => {
         .forEach((d) => {
           const { blockUid } = getUids(d);
           const value = getTextByBlockUid(blockUid);
-          if (value) {
+          if (value !== undefined) {
             archiveBlock(blockUid, value);
           }
         });
@@ -127,31 +114,16 @@ const initializeTodont = (extensionAPI: OnloadArgs["extensionAPI"]) => {
     }
     if (document.activeElement?.tagName === "TEXTAREA") {
       const textArea = document.activeElement as HTMLTextAreaElement;
-      const firstButtonTag = /{{\[\[([A-Z]{4,8})\]\]}}/.exec(
-        textArea.value,
-      )?.[1];
-      if (firstButtonTag === "TODO") {
-        replaceText({ before: "{{[[TODO]]}}", after: "{{[[ARCHIVED]]}}" });
-      } else if (firstButtonTag === "DONE") {
-        replaceText({ before: "{{[[DONE]]}}", after: "{{[[ARCHIVED]]}}" });
-      } else if (firstButtonTag === "ARCHIVED") {
-        replaceText({
-          before: "{{[[ARCHIVED]]}}",
-          after: "",
-          prepend: true,
-        });
-      } else {
-        replaceText({
-          before: "",
-          prepend: true,
-          after: "{{[[ARCHIVED]]}}",
-        });
-      }
+      replaceText(pickArchiveEdit(textArea.value));
     }
   };
 
   const toggle = (todontMode: typeof TODONT_MODES[number]) => {
     cleanup();
+
+    if (todontMode === "off") {
+      return;
+    }
 
     const platform =
       (
@@ -175,10 +147,6 @@ const initializeTodont = (extensionAPI: OnloadArgs["extensionAPI"]) => {
         label: ARCHIVE_COMMAND_LABEL,
       });
     });
-
-    if (todontMode === "off") {
-      return;
-    }
 
     const TODONT_CLASSNAME = "roamjs-todont";
     const css = document.createElement("style");
@@ -214,7 +182,7 @@ const initializeTodont = (extensionAPI: OnloadArgs["extensionAPI"]) => {
     });
 
     const isArchivedButton = (button: HTMLButtonElement): boolean =>
-      /\bARCHIVED\b/i.test(button.textContent || "");
+      button.textContent?.trim() === "ARCHIVED";
     const syncArchivedButton = (button: HTMLButtonElement) => {
       if (isArchivedButton(button)) {
         button.classList.add(TODONT_CLASSNAME);

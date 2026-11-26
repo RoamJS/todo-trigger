@@ -20,14 +20,6 @@ import initializeTodont, { TODONT_MODES } from "./utils/todont";
 export default runExtension(async ({ extensionAPI }) => {
   const { toggle: toggleTodont, cleanup: cleanupTodont } =
     initializeTodont(extensionAPI);
-  const getTodontMode = (): (typeof TODONT_MODES)[number] => {
-    const configuredMode = extensionAPI.settings.get("todont-mode");
-    return TODONT_MODES.includes(
-      configuredMode as (typeof TODONT_MODES)[number],
-    )
-      ? (configuredMode as (typeof TODONT_MODES)[number])
-      : "icon";
-  };
   extensionAPI.settings.panel.create({
     tabTitle: "TODO Trigger",
     settings: [
@@ -51,18 +43,6 @@ export default runExtension(async ({ extensionAPI }) => {
         description:
           "The set of pairs that you would want to be replaced upon switching between todo and done",
         action: { type: "input", placeholder: "#toRead, #Read" },
-      },
-      {
-        id: "todont-mode",
-        name: "TODONT Mode",
-        description:
-          "Whether to incorporate styling when TODOS turn into ARCHIVED buttons.",
-        action: {
-          type: "select",
-          items: TODONT_MODES.slice(0),
-          onChange: (e) =>
-            toggleTodont(e.target.value as (typeof TODONT_MODES)[number]),
-        },
       },
       {
         id: "ignore-tags",
@@ -107,23 +87,20 @@ export default runExtension(async ({ extensionAPI }) => {
           placeholder: "Block reference or page name",
         },
       },
+      {
+        id: "todont-mode",
+        name: "TODONT Mode",
+        description:
+          "Whether to incorporate styling when TODOS turn into ARCHIVED buttons.",
+        action: {
+          type: "select",
+          items: TODONT_MODES.slice(0),
+          onChange: (e) =>
+            toggleTodont(e.target.value as (typeof TODONT_MODES)[number]),
+        },
+      },
     ],
   });
-  const settingsCaretStyle = document.createElement("style");
-  settingsCaretStyle.textContent = `
-.rm-settings .bp3-button .bp3-icon-caret-up {
-  transform: rotate(180deg);
-}
-`;
-  document.head.appendChild(settingsCaretStyle);
-
-  if (
-    !TODONT_MODES.includes(
-      extensionAPI.settings.get("todont-mode") as (typeof TODONT_MODES)[number],
-    )
-  ) {
-    await extensionAPI.settings.set("todont-mode", "icon");
-  }
 
   const CLASSNAMES_TO_CHECK = [
     "rm-block-ref",
@@ -506,7 +483,11 @@ export default runExtension(async ({ extensionAPI }) => {
   }
 
   addDeferTODOsCommand();
-  toggleTodont(getTodontMode());
+  toggleTodont(
+    (extensionAPI.settings.get(
+      "todont-mode",
+    ) as (typeof TODONT_MODES)[number]) || "off",
+  );
 
   return {
     domListeners: [
@@ -516,7 +497,6 @@ export default runExtension(async ({ extensionAPI }) => {
     commands: ["Defer TODO"],
     unload: () => {
       cleanupTodont();
-      settingsCaretStyle.remove();
     },
   };
 });
