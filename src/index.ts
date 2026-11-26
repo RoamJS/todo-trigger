@@ -47,7 +47,7 @@ export default runExtension(async ({ extensionAPI }) => {
         id: "ignore-tags",
         name: "Ignore Tags",
         description:
-          "Comma- or pipe-separated list of tags that should skip TODO/DONE triggers",
+          "Comma- or pipe-separated list of tags that skip TODO/DONE triggers for the block or any of its parent blocks",
         action: { type: "input", placeholder: "#no-trigger, #skip" },
       },
       {
@@ -108,22 +108,30 @@ export default runExtension(async ({ extensionAPI }) => {
     "roam-block",
   ];
 
-  const shouldIgnoreBlock = (value: string) => {
+  const shouldIgnoreBlock = (value: string, blockUid?: string) => {
     const ignoreTags = extensionAPI.settings.get("ignore-tags") as string;
     if (!ignoreTags) {
       return false;
     }
-    return ignoreTags
+    const tags = ignoreTags
       .split(/[,|]/)
       .map((tag) =>
         tag.trim().replace(/^#/, "").replace(/^\[\[/, "").replace(/\]\]$/, ""),
       )
-      .filter((tag) => !!tag)
-      .some((tag) => createTagRegex(tag).test(value));
+      .filter((tag) => !!tag);
+    return (
+      tags.some((tag) => createTagRegex(tag).test(value)) ||
+      (blockUid &&
+        !!window.roamAlphaAPI.q(
+          "[:find ?p :in $ ?uid [?tag ...] :where [?b :block/uid ?uid] [?b :block/parents ?p] [?p :block/refs ?r] [?r :node/title ?tag]]",
+          blockUid,
+          tags,
+        )?.[0])
+    );
   };
 
   const onTodo = (blockUid: string, oldValue: string) => {
-    if (shouldIgnoreBlock(oldValue)) {
+    if (shouldIgnoreBlock(oldValue, blockUid)) {
       return;
     }
     const text = extensionAPI.settings.get("append-text") as string;
@@ -213,7 +221,7 @@ export default runExtension(async ({ extensionAPI }) => {
   };
 
   const onDone = (blockUid: string, oldValue: string) => {
-    if (shouldIgnoreBlock(oldValue)) {
+    if (shouldIgnoreBlock(oldValue, blockUid)) {
       return { explode: false };
     }
     const text = extensionAPI.settings.get("append-text") as string;
