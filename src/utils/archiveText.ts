@@ -1,34 +1,30 @@
-export type ArchiveEdit = {
-  before: string;
-  after: string;
-  prepend?: boolean;
+const buttonTag = /{{\[\[([A-Z]{4,8})\]\]}}/;
+const archivedTag = "{{[[ARCHIVED]]}}";
+
+const archivedIndex = (value: string): number => {
+  const first = buttonTag.exec(value);
+  if (!first) return -1;
+  if (first[1] === "ARCHIVED") return first.index;
+  if (first[1] === "TODO" || first[1] === "DONE") {
+    const rest = value.slice(first.index + first[0].length);
+    const adjacent = /^(\s*){{\[\[ARCHIVED\]\]}}/.exec(rest);
+    if (adjacent) return first.index + first[0].length + adjacent[1].length;
+  }
+  return -1;
 };
 
 export const isArchivedText = (value: string): boolean =>
-  value.includes("{{[[ARCHIVED]]}}");
+  archivedIndex(value) !== -1;
 
-export const pickArchiveEdit = (value: string): ArchiveEdit => {
-  if (isArchivedText(value)) {
-    return { before: "{{[[ARCHIVED]]}}", after: "", prepend: true };
+export const toggleArchived = (value: string): string => {
+  const index = archivedIndex(value);
+  if (index !== -1) {
+    const end = index + archivedTag.length;
+    return value.slice(0, index) + value.slice(end + (value[end] === " " ? 1 : 0));
   }
-  const firstButtonTag = /{{\[\[([A-Z]{4,8})\]\]}}/.exec(value)?.[1];
-  if (firstButtonTag === "TODO" || firstButtonTag === "DONE") {
-    return { before: `{{[[${firstButtonTag}]]}}`, after: "{{[[ARCHIVED]]}}" };
+  const first = buttonTag.exec(value);
+  if (first && (first[1] === "TODO" || first[1] === "DONE")) {
+    return value.slice(0, first.index) + archivedTag + value.slice(first.index + first[0].length);
   }
-  return { before: "", after: "{{[[ARCHIVED]]}}", prepend: true };
+  return `${archivedTag} ${value}`;
 };
-
-export const applyArchiveEdit = (
-  value: string,
-  { before, after, prepend }: ArchiveEdit,
-): string =>
-  !before
-    ? prepend
-      ? `${after} ${value}`
-      : `${value}${after}`
-    : value.replace(
-        !after && prepend && value.indexOf(`${before} `) === value.indexOf(before)
-          ? `${before} `
-          : before,
-        after,
-      );

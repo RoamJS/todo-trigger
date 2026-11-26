@@ -4,7 +4,7 @@ import getUids from "roamjs-components/dom/getUids";
 import getTextByBlockUid from "roamjs-components/queries/getTextByBlockUid";
 import updateBlock from "roamjs-components/writes/updateBlock";
 import { OnloadArgs } from "roamjs-components/types";
-import { applyArchiveEdit, isArchivedText, pickArchiveEdit } from "./archiveText";
+import { isArchivedText, toggleArchived } from "./archiveText";
 
 const CLASSNAMES_TO_CHECK = [
   "rm-block-ref",
@@ -32,20 +32,11 @@ const createMobileIcon = (id: string, iconType: string): HTMLButtonElement => {
 };
 
 // TODO replace this garbage
-export const replaceText = ({
-  before,
-  after,
-  prepend,
-}: {
-  before: string;
-  after: string;
-  prepend?: boolean;
-}): void => {
+export const replaceText = (text: string): void => {
   const textArea = document.activeElement as HTMLTextAreaElement;
   const oldValue = textArea.value;
   const start = textArea.selectionStart;
   const end = textArea.selectionEnd;
-  const text = applyArchiveEdit(oldValue, { before, after, prepend });
   const location = window.roamAlphaAPI.ui.getFocusedBlock();
   if (!location) return;
   const blockUid = location["block-uid"];
@@ -87,7 +78,7 @@ const initializeTodont = (extensionAPI: OnloadArgs["extensionAPI"]) => {
   };
 
   const archiveBlock = (blockUid: string, value: string) => {
-    const newText = applyArchiveEdit(value, pickArchiveEdit(value));
+    const newText = toggleArchived(value);
     if (newText !== value) {
       updateBlock({ uid: blockUid, text: newText });
     }
@@ -115,7 +106,7 @@ const initializeTodont = (extensionAPI: OnloadArgs["extensionAPI"]) => {
     }
     if (document.activeElement?.tagName === "TEXTAREA") {
       const textArea = document.activeElement as HTMLTextAreaElement;
-      replaceText(pickArchiveEdit(textArea.value));
+      replaceText(toggleArchived(textArea.value));
     }
   };
 

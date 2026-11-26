@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { applyArchiveEdit, pickArchiveEdit } from "../src/utils/archiveText.ts";
+import { isArchivedText, toggleArchived } from "../src/utils/archiveText.ts";
 
 test("archive edits toggle the first button tag consistently", () => {
   const cases = [
     ["{{[[TODO]]}} task", "{{[[ARCHIVED]]}} task"],
+    ["{{[[TODO]]}} a {{[[ARCHIVED]]}}", "{{[[ARCHIVED]]}} a {{[[ARCHIVED]]}}"],
     ["{{[[DONE]]}} task", "{{[[ARCHIVED]]}} task"],
     ["{{[[ARCHIVED]]}} task", "task"],
     ["{{[[TODO]]}} {{[[ARCHIVED]]}} x", "{{[[TODO]]}} x"],
@@ -16,6 +17,10 @@ test("archive edits toggle the first button tag consistently", () => {
     ["{{[[OTHER]]}} {{[[TODO]]}} task", "{{[[ARCHIVED]]}} {{[[OTHER]]}} {{[[TODO]]}} task"],
   ];
   for (const [input, expected] of cases) {
-    assert.equal(applyArchiveEdit(input, pickArchiveEdit(input)), expected);
+    assert.equal(toggleArchived(input), expected);
   }
+  assert.equal(isArchivedText("{{[[TODO]]}} a {{[[ARCHIVED]]}}"), false);
+  assert.equal(isArchivedText("{{[[DONE]]}} \t{{[[ARCHIVED]]}} x"), true);
+  assert.equal(isArchivedText("before {{[[ARCHIVED]]}} task"), true);
+  assert.equal(isArchivedText("{{[[OTHER]]}} {{[[ARCHIVED]]}}"), false);
 });

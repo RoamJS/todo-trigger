@@ -353,11 +353,9 @@ export default runExtension(async ({ extensionAPI }) => {
     const e = _e as KeyboardEvent;
     if (e.key === "Enter") {
       if (isControl(e)) {
-        // Cmd/Ctrl+Shift+Enter is reserved for the TODONT Hotkey command when enabled.
-        const todontMode = extensionAPI.settings.get("todont-mode");
-        if (e.shiftKey && todontMode && todontMode !== "off") {
-          return;
-        }
+        // Roam toggles TODO/DONE only on plain Cmd/Ctrl+Enter, so other
+        // Enter chords bound to TODONT Hotkey must not fire TODO/DONE actions.
+        if (e.shiftKey || e.altKey) return;
         const target = e.target as HTMLElement;
         if (target.tagName === "TEXTAREA") {
           const textArea = target as HTMLTextAreaElement;
