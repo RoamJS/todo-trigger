@@ -330,13 +330,13 @@ export default runExtension(async ({ extensionAPI }) => {
     },
   });
 
-  const clickListener = async (e: MouseEvent) => {
+  const clickListener = (e: Event) => {
     const target = e.target as HTMLElement;
-    if (
-      target.parentElement?.getElementsByClassName(
-        "bp3-text-overflow-ellipsis",
-      )[0]?.innerHTML === "TODO"
-    ) {
+    const menuLabel = target
+      .closest(".bp3-menu-item")
+      ?.querySelector(".bp3-text-overflow-ellipsis")
+      ?.textContent?.trim();
+    if (menuLabel === "TODO") {
       const textarea = target
         .closest(".roam-block-container")
         ?.getElementsByTagName?.("textarea")?.[0];
@@ -487,6 +487,7 @@ export default runExtension(async ({ extensionAPI }) => {
   return {
     domListeners: [
       { type: "keydown", el: document, listener: keydownEventListener },
+      { type: "click", el: document, listener: clickListener },
     ],
     commands: ["Defer TODO"],
   };
