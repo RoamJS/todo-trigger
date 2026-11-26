@@ -8,7 +8,6 @@ test("archive edits toggle the first button tag consistently", () => {
     ["{{[[TODO]]}} a {{[[ARCHIVED]]}}", "{{[[ARCHIVED]]}} a {{[[ARCHIVED]]}}"],
     ["{{[[DONE]]}} task", "{{[[ARCHIVED]]}} task"],
     ["{{[[ARCHIVED]]}} task", "task"],
-    ["{{[[TODO]]}} {{[[ARCHIVED]]}} x", "{{[[TODO]]}} x"],
     ["{{[[ARCHIVED]]}}", ""],
     ["task {{[[ARCHIVED]]}}", "task "],
     ["before {{[[ARCHIVED]]}} task", "before task"],
@@ -20,7 +19,6 @@ test("archive edits toggle the first button tag consistently", () => {
     assert.equal(toggleArchived(input), expected);
   }
   assert.equal(isArchivedText("{{[[TODO]]}} a {{[[ARCHIVED]]}}"), false);
-  assert.equal(isArchivedText("{{[[DONE]]}} \t{{[[ARCHIVED]]}} x"), true);
   assert.equal(isArchivedText("before {{[[ARCHIVED]]}} task"), true);
   assert.equal(isArchivedText("{{[[OTHER]]}} {{[[ARCHIVED]]}}"), false);
 });

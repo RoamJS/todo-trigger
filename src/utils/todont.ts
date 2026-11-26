@@ -78,10 +78,7 @@ const initializeTodont = (extensionAPI: OnloadArgs["extensionAPI"]) => {
   };
 
   const archiveBlock = (blockUid: string, value: string) => {
-    const newText = toggleArchived(value);
-    if (newText !== value) {
-      updateBlock({ uid: blockUid, text: newText });
-    }
+    updateBlock({ uid: blockUid, text: toggleArchived(value) });
   };
 
   const todontCallback = () => {
@@ -212,13 +209,6 @@ const initializeTodont = (extensionAPI: OnloadArgs["extensionAPI"]) => {
         if (record.target instanceof HTMLElement) {
           syncArchivedButtons(record.target);
         }
-        record.addedNodes.forEach((node) => {
-          if (node instanceof HTMLElement) {
-            syncArchivedButtons(node);
-          } else if (node instanceof Text) {
-            syncArchivedButtons(node.parentElement);
-          }
-        });
       });
       const mobileBackButton = document.getElementById(
         "mobile-back-icon-button",

@@ -3,14 +3,7 @@ const archivedTag = "{{[[ARCHIVED]]}}";
 
 const archivedIndex = (value: string): number => {
   const first = buttonTag.exec(value);
-  if (!first) return -1;
-  if (first[1] === "ARCHIVED") return first.index;
-  if (first[1] === "TODO" || first[1] === "DONE") {
-    const rest = value.slice(first.index + first[0].length);
-    const adjacent = /^(\s*){{\[\[ARCHIVED\]\]}}/.exec(rest);
-    if (adjacent) return first.index + first[0].length + adjacent[1].length;
-  }
-  return -1;
+  return first?.[1] === "ARCHIVED" ? first.index : -1;
 };
 
 export const isArchivedText = (value: string): boolean =>
