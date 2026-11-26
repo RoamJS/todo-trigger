@@ -127,7 +127,11 @@ export default runExtension(async ({ extensionAPI }) => {
       return;
     }
     const text = extensionAPI.settings.get("append-text") as string;
-    let value = oldValue;
+    // Roam's Cmd/Ctrl+Enter prepends TODO to an ARCHIVED block.
+    let value = oldValue.replace(
+      /^(\{\{\[\[TODO\]\]\}\})\s*\{\{\[\[ARCHIVED\]\]\}\}/,
+      "$1",
+    );
     if (text) {
       const formattedText = ` ${text
         .replace(new RegExp("\\^", "g"), "\\^")
