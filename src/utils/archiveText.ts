@@ -23,4 +23,9 @@ export const applyArchiveEdit = (
     ? prepend
       ? `${after} ${value}`
       : `${value}${after}`
-    : value.replace(`${before}${!after && prepend ? " " : ""}`, after);
+    : value.replace(
+        !after && prepend && value.indexOf(`${before} `) === value.indexOf(before)
+          ? `${before} `
+          : before,
+        after,
+      );

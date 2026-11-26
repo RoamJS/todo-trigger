@@ -106,9 +106,7 @@ const initializeTodont = (extensionAPI: OnloadArgs["extensionAPI"]) => {
         .forEach((d) => {
           const { blockUid } = getUids(d);
           const value = getTextByBlockUid(blockUid);
-          if (value !== undefined) {
-            archiveBlock(blockUid, value);
-          }
+          archiveBlock(blockUid, value);
         });
       return;
     }
@@ -125,21 +123,10 @@ const initializeTodont = (extensionAPI: OnloadArgs["extensionAPI"]) => {
       return;
     }
 
-    const platform =
-      (
-        navigator as Navigator & {
-          userAgentData?: { platform?: string };
-        }
-      ).userAgentData?.platform ||
-      navigator.platform ||
-      "";
-    const defaultArchiveHotkey = /Mac|iPhone|iPad|iPod/i.test(platform)
-      ? "cmd+shift+enter"
-      : "ctrl+shift+enter";
     extensionAPI.ui.commandPalette.addCommand({
       label: ARCHIVE_COMMAND_LABEL,
       callback: todontCallback,
-      defaultHotkey: defaultArchiveHotkey,
+      defaultHotkey: "defmod-shift-enter",
       disableHotkey: false,
     });
     unloads.add(() => {

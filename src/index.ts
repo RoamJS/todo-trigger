@@ -353,8 +353,9 @@ export default runExtension(async ({ extensionAPI }) => {
     const e = _e as KeyboardEvent;
     if (e.key === "Enter") {
       if (isControl(e)) {
-        // Cmd/Ctrl+Shift+Enter is reserved for the Archive TODO command.
-        if (e.shiftKey) {
+        // Cmd/Ctrl+Shift+Enter is reserved for the TODONT Hotkey command when enabled.
+        const todontMode = extensionAPI.settings.get("todont-mode");
+        if (e.shiftKey && todontMode && todontMode !== "off") {
           return;
         }
         const target = e.target as HTMLElement;
