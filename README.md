@@ -53,7 +53,9 @@ When None are configured, nothing happens.
 
 TODONT Mode allows users to archive todos, by replacing the `{{[[TODO]]}}` with a `{{[[ARCHIVED]]}}`. To enable, switch on `icon` in the `TODONT MODE` field in your Roam Depot Settings.
 
-To archive a `TODO`, just hit CMD+SHIFT+ENTER (CTRL in windows), or run `TODONT Hotkey` from the command palette, where you can also change its hotkey. With several blocks selected, it archives all of them, or clears ARCHIVED when they're all archived already. In the text area it inserts `{{[[ARCHIVED]]}}` at the beginning of the block. Any TODOs or DONEs will be replaced with an ARCHIVED. If an ARCHIVED exists, it will be cleared. If none of the above exists, an ARCHIVED is inserted in the block.
+With TODONT Mode on, press Cmd+Shift+Enter on macOS or Ctrl+Shift+Enter on Windows, or run **TODONT Hotkey** from the command palette. Roam can also assign that shortcut to **Go to last block on page**. To choose another shortcut for archiving, open **Settings → Hotkeys** and change **TODONT Hotkey**.
+
+Archiving replaces TODO or DONE with ARCHIVED and adds ARCHIVED to a plain block. Using the command on an archived block clears the marker. With several blocks selected, the command archives the remaining blocks. Running it on an entirely archived selection clears the markers.
 
 To change the CSS styling of the archive display, you'll want to change the CSS associated with the `roamjs-todont` class.
 

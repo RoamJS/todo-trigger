@@ -113,12 +113,12 @@ const initializeTodont = (extensionAPI: OnloadArgs["extensionAPI"]) => {
       return;
     }
 
-    extensionAPI.ui.commandPalette.addCommand({
+    const archiveCommand = {
       label: ARCHIVE_COMMAND_LABEL,
       callback: todontCallback,
-      defaultHotkey: "defmod-shift-enter",
-      disableHotkey: false,
-    });
+      "default-hotkey": "defmod-shift-enter",
+    };
+    extensionAPI.ui.commandPalette.addCommand(archiveCommand);
     unloads.add(() => {
       extensionAPI.ui.commandPalette.removeCommand({
         label: ARCHIVE_COMMAND_LABEL,
@@ -163,7 +163,10 @@ const initializeTodont = (extensionAPI: OnloadArgs["extensionAPI"]) => {
     const labelledButtons = new WeakSet<HTMLButtonElement>();
     const unstyleButton = (button: HTMLButtonElement): void => {
       button.classList.remove(TODONT_CLASSNAME);
-      if (labelledButtons.delete(button) && button.getAttribute("aria-label") === "ARCHIVED") {
+      if (
+        labelledButtons.delete(button) &&
+        button.getAttribute("aria-label") === "ARCHIVED"
+      ) {
         button.removeAttribute("aria-label");
       }
     };
@@ -241,7 +244,6 @@ const initializeTodont = (extensionAPI: OnloadArgs["extensionAPI"]) => {
       );
       selectors.push(`.rm-zoom-item-content:has(button.${TODONT_CLASSNAME})`);
       css.textContent += `${selectors.join(", ")} { text-decoration: line-through; }`;
-
     }
   };
 
