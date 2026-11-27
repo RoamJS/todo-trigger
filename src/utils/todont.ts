@@ -212,7 +212,8 @@ const initializeTodont = (extensionAPI: OnloadArgs["extensionAPI"]) => {
       struckOwners = owners;
     };
     if (todontMode === "strikethrough") {
-      css.textContent += `.${strikeClass} { text-decoration: line-through; }`;
+      // The ordinary TODO observer can set an inline decoration on the same owner.
+      css.textContent += `.${strikeClass} { text-decoration: line-through !important; }`;
       unloads.add(() => struckOwners.forEach((owner) => owner.classList.remove(strikeClass)));
     }
     syncArchivedButtons(document.body);
