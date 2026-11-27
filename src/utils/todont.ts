@@ -1,4 +1,3 @@
-import createHTMLObserver from "roamjs-components/dom/createHTMLObserver";
 import createObserver from "roamjs-components/dom/createObserver";
 import getUids from "roamjs-components/dom/getUids";
 import getTextByBlockUid from "roamjs-components/queries/getTextByBlockUid";
@@ -148,7 +147,7 @@ const initializeTodont = (extensionAPI: OnloadArgs["extensionAPI"]) => {
     justify-content: center;
 }
 .bp3-button.bp3-small.${TODONT_CLASSNAME}::before {
-    content: "x";
+    content: "x" / "";
     color: #2E2E2E;
     font-size: 12px;
     line-height: 14px;
@@ -161,11 +160,22 @@ const initializeTodont = (extensionAPI: OnloadArgs["extensionAPI"]) => {
 
     const isArchivedButton = (button: HTMLButtonElement): boolean =>
       button.textContent?.trim() === "ARCHIVED";
+    const labelledButtons = new WeakSet<HTMLButtonElement>();
+    const unstyleButton = (button: HTMLButtonElement): void => {
+      button.classList.remove(TODONT_CLASSNAME);
+      if (labelledButtons.delete(button) && button.getAttribute("aria-label") === "ARCHIVED") {
+        button.removeAttribute("aria-label");
+      }
+    };
     const syncArchivedButton = (button: HTMLButtonElement) => {
       if (isArchivedButton(button)) {
         button.classList.add(TODONT_CLASSNAME);
+        if (!button.hasAttribute("aria-label")) {
+          button.setAttribute("aria-label", "ARCHIVED");
+          labelledButtons.add(button);
+        }
       } else {
-        button.classList.remove(TODONT_CLASSNAME);
+        unstyleButton(button);
       }
     };
     const syncArchivedButtons = (node?: HTMLElement | null) => {
@@ -180,9 +190,7 @@ const initializeTodont = (extensionAPI: OnloadArgs["extensionAPI"]) => {
     };
     syncArchivedButtons(document.body);
     unloads.add(() => {
-      document.querySelectorAll<HTMLButtonElement>(`.${TODONT_CLASSNAME}`).forEach((b) => {
-        b.classList.remove(TODONT_CLASSNAME);
-      });
+      document.querySelectorAll<HTMLButtonElement>(`.${TODONT_CLASSNAME}`).forEach(unstyleButton);
     });
 
     let previousActiveElement: HTMLElement | null = null;
@@ -228,31 +236,12 @@ const initializeTodont = (extensionAPI: OnloadArgs["extensionAPI"]) => {
     });
 
     if (todontMode === "strikethrough") {
-      const styleBlock = (block?: HTMLElement) => {
-        if (block) {
-          block.style.textDecoration = "line-through";
-        }
-      };
-      const strikethroughObserver = createHTMLObserver({
-        callback: (b: HTMLButtonElement) => {
-          const zoom = b.closest(".rm-zoom-item-content") as HTMLSpanElement;
-          if (zoom) {
-            styleBlock(
-              zoom.firstElementChild?.firstElementChild as HTMLDivElement,
-            );
-            return;
-          }
-          const block = CLASSNAMES_TO_CHECK.map(
-            (c) => b.closest(`.${c}`) as HTMLElement,
-          ).find((d) => !!d);
-          if (block) {
-            styleBlock(block);
-          }
-        },
-        tag: "BUTTON",
-        className: TODONT_CLASSNAME,
-      });
-      unloads.add(() => strikethroughObserver.disconnect());
+      const selectors = CLASSNAMES_TO_CHECK.map(
+        (name) => `.${name}:has(button.${TODONT_CLASSNAME})`,
+      );
+      selectors.push(`.rm-zoom-item-content:has(button.${TODONT_CLASSNAME})`);
+      css.textContent += `${selectors.join(", ")} { text-decoration: line-through; }`;
+
     }
   };
 

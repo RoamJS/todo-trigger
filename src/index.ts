@@ -95,8 +95,11 @@ export default runExtension(async ({ extensionAPI }) => {
         action: {
           type: "select",
           items: TODONT_MODES.slice(0),
-          onChange: (e) =>
-            toggleTodont(e.target.value as (typeof TODONT_MODES)[number]),
+          onChange: (choice) => {
+            const value = typeof choice === "string" ? choice : choice.target?.value;
+            const mode = TODONT_MODES.find((item) => item === value);
+            if (mode) toggleTodont(mode);
+          },
         },
       },
     ],

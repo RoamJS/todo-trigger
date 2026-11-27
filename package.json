@@ -7,7 +7,7 @@
     "prebuild:roam": "npm install",
     "build:roam": "samepage build --dry",
     "start": "samepage dev",
-    "test": "node --test test/"
+    "test": "node --test"
   },
   "license": "MIT",
   "tags": [
