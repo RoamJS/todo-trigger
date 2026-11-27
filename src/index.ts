@@ -330,23 +330,28 @@ export default runExtension(async ({ extensionAPI }) => {
     },
   });
 
-  const clickListener = (e: Event) => {
-    const target = e.target as HTMLElement;
-    const menuLabel = target
-      .closest(".bp3-menu-item")
-      ?.querySelector(".bp3-text-overflow-ellipsis")
-      ?.textContent?.trim();
-    if (menuLabel === "TODO") {
-      const textarea = target
-        .closest(".roam-block-container")
-        ?.getElementsByTagName?.("textarea")?.[0];
-      if (textarea) {
-        const { blockUid } = getUids(textarea);
-        onTodo(blockUid, textarea.value);
-      }
-    }
+  let menuListenerActive = true;
+  const clickListener = (e: Event): void => {
+    if (!(e.target instanceof Element)) return;
+    const item = e.target.closest(".bp3-menu-item, .dont-unfocus-block");
+    const label = item?.querySelector(":scope > .bp3-text-overflow-ellipsis");
+    if (label?.textContent?.trim() !== "TODO") return;
+
+    const editor = document.activeElement;
+    if (!(editor instanceof HTMLTextAreaElement)) return;
+    const { blockUid, windowId } = getUids(editor);
+    if (!windowId) return;
+    // Roam applies the slash command after the click reaches its menu handler.
+    window.setTimeout(() => {
+      if (!menuListenerActive) return;
+      const value =
+        editor.isConnected && getUids(editor).blockUid === blockUid
+          ? editor.value
+          : getTextByBlockUid(blockUid);
+      if (value.startsWith("{{[[TODO]]}}")) onTodo(blockUid, value);
+    }, 0);
   };
-  document.addEventListener("click", clickListener);
+  document.addEventListener("click", clickListener, true);
 
   const keydownEventListener = async (_e: Event) => {
     const e = _e as KeyboardEvent;
@@ -487,8 +492,11 @@ export default runExtension(async ({ extensionAPI }) => {
   return {
     domListeners: [
       { type: "keydown", el: document, listener: keydownEventListener },
-      { type: "click", el: document, listener: clickListener },
     ],
     commands: ["Defer TODO"],
+    unload: () => {
+      menuListenerActive = false;
+      document.removeEventListener("click", clickListener, true);
+    },
   };
 });
