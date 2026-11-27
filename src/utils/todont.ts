@@ -191,7 +191,32 @@ const initializeTodont = (extensionAPI: OnloadArgs["extensionAPI"]) => {
       }
       node.querySelectorAll<HTMLButtonElement>("button").forEach(syncArchivedButton);
     };
+    const strikeClass = "roamjs-todont-strike";
+    const ownerSelector = [...CLASSNAMES_TO_CHECK, "rm-zoom-item-content"]
+      .map((name) => `.${name}`)
+      .join(", ");
+    let struckOwners = new Set<HTMLElement>();
+    const syncStrikethrough = (): void => {
+      if (todontMode !== "strikethrough") return;
+      const owners = new Set<HTMLElement>();
+      document.querySelectorAll(`button.${TODONT_CLASSNAME}`).forEach((button) => {
+        const owner = button.closest<HTMLElement>(ownerSelector);
+        if (owner) owners.add(owner);
+      });
+      struckOwners.forEach((owner) => {
+        if (!owners.has(owner)) owner.classList.remove(strikeClass);
+      });
+      owners.forEach((owner) => {
+        if (!struckOwners.has(owner)) owner.classList.add(strikeClass);
+      });
+      struckOwners = owners;
+    };
+    if (todontMode === "strikethrough") {
+      css.textContent += `.${strikeClass} { text-decoration: line-through; }`;
+      unloads.add(() => struckOwners.forEach((owner) => owner.classList.remove(strikeClass)));
+    }
     syncArchivedButtons(document.body);
+    syncStrikethrough();
     unloads.add(() => {
       document.querySelectorAll<HTMLButtonElement>(`.${TODONT_CLASSNAME}`).forEach(unstyleButton);
     });
@@ -221,6 +246,7 @@ const initializeTodont = (extensionAPI: OnloadArgs["extensionAPI"]) => {
           syncArchivedButtons(record.target);
         }
       });
+      syncStrikethrough();
       const mobileBackButton = document.getElementById(
         "mobile-back-icon-button",
       );
@@ -237,14 +263,6 @@ const initializeTodont = (extensionAPI: OnloadArgs["extensionAPI"]) => {
     unloads.add(() => {
       iconObserver.disconnect();
     });
-
-    if (todontMode === "strikethrough") {
-      const selectors = CLASSNAMES_TO_CHECK.map(
-        (name) => `.${name}:has(button.${TODONT_CLASSNAME})`,
-      );
-      selectors.push(`.rm-zoom-item-content:has(button.${TODONT_CLASSNAME})`);
-      css.textContent += `${selectors.join(", ")} { text-decoration: line-through; }`;
-    }
   };
 
   return {
