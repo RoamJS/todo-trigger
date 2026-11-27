@@ -47,7 +47,7 @@ export default runExtension(async ({ extensionAPI }) => {
         id: "ignore-tags",
         name: "Ignore Tags",
         description:
-          "Comma- or pipe-separated list of tags that skip TODO/DONE triggers for the block or any of its parent blocks",
+          "Comma- or pipe-separated list of tags that skip TODO/DONE triggers and done styling for the block or any of its parent blocks",
         action: { type: "input", placeholder: "#no-trigger, #skip" },
       },
       {
@@ -433,7 +433,10 @@ export default runExtension(async ({ extensionAPI }) => {
             const blockUid = getBlockUidFromTarget(input);
             const zoomElement = zoom.firstElementChild
               ?.firstElementChild as HTMLDivElement;
-            if (blockUid && shouldIgnoreBlock(getTextByBlockUid(blockUid))) {
+            if (
+              blockUid &&
+              shouldIgnoreBlock(getTextByBlockUid(blockUid), blockUid)
+            ) {
               unstyleBlock(zoomElement);
             } else {
               styleBlock(zoomElement);
@@ -445,7 +448,10 @@ export default runExtension(async ({ extensionAPI }) => {
           ).find((d) => !!d);
           if (block) {
             const blockUid = getBlockUidFromTarget(input);
-            if (blockUid && shouldIgnoreBlock(getTextByBlockUid(blockUid))) {
+            if (
+              blockUid &&
+              shouldIgnoreBlock(getTextByBlockUid(blockUid), blockUid)
+            ) {
               unstyleBlock(block);
               return;
             }

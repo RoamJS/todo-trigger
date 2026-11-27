@@ -29,7 +29,7 @@ This extension supports the following configuration options, to be specified in 
 - `Replace Tags` - (Optional) The set of pairs that you would want to be replaced upon switching between todo and done. Multiple pairs are deliminited by `|` and each pair is delimited by `,`. For example, `Replace Tags:: #toRead, #Read | #toWrite, #Written`
   - There are a couple of placeholders this option supports. `{date}` maps to any date tag and `{today}` maps to today. So you could configure `Replace Tags:: {date}, {today}` to replace a date tag with today's date.
 
-- `Ignore Tags` - (Optional) Comma- or pipe-separated list of tags that skip TODO/DONE triggers for the block or any of its parent blocks (for example, `#no-trigger, #skip`). A TODO nested under `Project #no-trigger` skips the triggers, even if it is several levels deep.
+- `Ignore Tags` - (Optional) Comma- or pipe-separated list of tags that skip TODO/DONE triggers and done styling for the block or any of its parent blocks (for example, `#no-trigger, #skip`). A TODO nested under `Project #no-trigger` skips triggers and done styling, even if it is several levels deep.
 
 - `Strikethrough` - (Optional) Set to `True` to strikethrough blocks with `{{[[DONE]]}}`.
 
