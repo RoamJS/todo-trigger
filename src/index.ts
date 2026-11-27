@@ -341,6 +341,7 @@ export default runExtension(async ({ extensionAPI }) => {
     if (!(editor instanceof HTMLTextAreaElement)) return;
     const { blockUid, windowId } = getUids(editor);
     if (!windowId) return;
+    const before = editor.value;
     // Roam applies the slash command after the click reaches its menu handler.
     window.setTimeout(() => {
       if (!menuListenerActive) return;
@@ -348,7 +349,9 @@ export default runExtension(async ({ extensionAPI }) => {
         editor.isConnected && getUids(editor).blockUid === blockUid
           ? editor.value
           : getTextByBlockUid(blockUid);
-      if (value.startsWith("{{[[TODO]]}}")) onTodo(blockUid, value);
+      if (value !== before && value.includes("{{[[TODO]]}}")) {
+        onTodo(blockUid, value);
+      }
     }, 0);
   };
   document.addEventListener("click", clickListener, true);
