@@ -127,7 +127,11 @@ export default runExtension(async ({ extensionAPI }) => {
       return;
     }
     const text = extensionAPI.settings.get("append-text") as string;
-    let value = oldValue;
+    // Roam's Cmd/Ctrl+Enter prepends TODO to an ARCHIVED block.
+    let value = oldValue.replace(
+      /^(\{\{\[\[TODO\]\]\}\})\s*\{\{\[\[ARCHIVED\]\]\}\}/,
+      "$1",
+    );
     if (text) {
       const formattedText = ` ${text
         .replace(new RegExp("\\^", "g"), "\\^")
@@ -326,23 +330,31 @@ export default runExtension(async ({ extensionAPI }) => {
     },
   });
 
-  const clickListener = async (e: MouseEvent) => {
-    const target = e.target as HTMLElement;
-    if (
-      target.parentElement?.getElementsByClassName(
-        "bp3-text-overflow-ellipsis",
-      )[0]?.innerHTML === "TODO"
-    ) {
-      const textarea = target
-        .closest(".roam-block-container")
-        ?.getElementsByTagName?.("textarea")?.[0];
-      if (textarea) {
-        const { blockUid } = getUids(textarea);
-        onTodo(blockUid, textarea.value);
+  let menuListenerActive = true;
+  const clickListener = (e: Event): void => {
+    if (!(e.target instanceof Element)) return;
+    const item = e.target.closest(".bp3-menu-item, .dont-unfocus-block");
+    const label = item?.querySelector(":scope > .bp3-text-overflow-ellipsis");
+    if (label?.textContent?.trim() !== "TODO") return;
+
+    const editor = document.activeElement;
+    if (!(editor instanceof HTMLTextAreaElement)) return;
+    const { blockUid, windowId } = getUids(editor);
+    if (!windowId) return;
+    const before = editor.value;
+    // Roam applies the slash command after the click reaches its menu handler.
+    window.setTimeout(() => {
+      if (!menuListenerActive) return;
+      const value =
+        editor.isConnected && getUids(editor).blockUid === blockUid
+          ? editor.value
+          : getTextByBlockUid(blockUid);
+      if (value !== before && value.includes("{{[[TODO]]}}")) {
+        onTodo(blockUid, value);
       }
-    }
+    }, 0);
   };
-  document.addEventListener("click", clickListener);
+  document.addEventListener("click", clickListener, true);
 
   const keydownEventListener = async (_e: Event) => {
     const e = _e as KeyboardEvent;
@@ -485,5 +497,9 @@ export default runExtension(async ({ extensionAPI }) => {
       { type: "keydown", el: document, listener: keydownEventListener },
     ],
     commands: ["Defer TODO"],
+    unload: () => {
+      menuListenerActive = false;
+      document.removeEventListener("click", clickListener, true);
+    },
   };
 });
